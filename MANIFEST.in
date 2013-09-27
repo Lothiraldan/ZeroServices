@@ -1,0 +1,2 @@
+recursive-include smartforge/ui/templates *
+recursive-include smartforge/ui/static *

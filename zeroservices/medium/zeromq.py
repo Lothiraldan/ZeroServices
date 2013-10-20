@@ -4,6 +4,7 @@ import zmq
 import time
 from zmq.eventloop import ioloop
 ioloop.install()
+from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 import json
 import logging
@@ -82,10 +83,13 @@ class ZeroMQMedium(object):
     MCAST_ADDR = "237.252.249.227"
     MCAST_PORT = 32000
 
-    def __init__(self, service, port_random=False):
+    def __init__(self, service, port_random=False, ioloop=None):
         self.service = service
         self.service_info = service.service_info()
-        self.ioloop = ioloop.IOLoop.instance()
+
+        if ioloop is None:
+            ioloop = IOLoop.instance()
+        self.ioloop = ioloop
 
         self.logger = logging.getLogger('%s.%s' % (self.service_info['name'],
             'medium'))
@@ -93,7 +97,6 @@ class ZeroMQMedium(object):
 
         # ØMQ Sockets
         self.context = zmq.Context.instance()
-        ioloop.install()
 
         self.sub = ZMQStream(stream(self.context, zmq.SUB,
             bind=False))
@@ -111,8 +114,8 @@ class ZeroMQMedium(object):
 
         # UDP Socket
         self.udp_socket = self.create_udp_socket()
-        ioloop.IOLoop.instance().add_handler(self.udp_socket.fileno(),
-            self.process_register, ioloop.IOLoop.READ)
+        self.ioloop.add_handler(self.udp_socket.fileno(),
+                                self.process_register, IOLoop.READ)
 
         self.service_info['server_port'] = self.server_port
         self.service_info['pub_port'] = self.pub_port
@@ -197,7 +200,6 @@ class ZeroMQMedium(object):
         #     import time; time.sleep(1)
         #     socket.send(message[0])
 
-    @gen.coroutine
     def process_raw_query(self, raw_message):
         self.logger.info('Raw message %s', raw_message)
         sender_uuid, message_type, message = raw_message
@@ -209,9 +211,8 @@ class ZeroMQMedium(object):
         if message_type == 'register':
             self.service.on_registration_message(message)
         else:
-            self.service.on_message(message_type, message)
-            # result = yield gen.Task(self.msg_callback, **message)
-            # self.server.send_multipart((sender_uuid, json.dumps(result)))
+            result = self.service.on_message(message_type, **message)
+            self.server.send_multipart((sender_uuid, json.dumps(result)))
 
     def process_register(self, *args):
         data, address = self.udp_socket.recvfrom(1024)
@@ -285,10 +286,17 @@ class ZeroMQMedium(object):
         self.logger.debug("Publish %s %s" % (event_type, event_data))
         self.pub.send('%s %s' % (event_type, json.dumps(event_data)))
 
-    def send(self, address, port, message, msg_type="message"):
+    def send(self, address, port, message, msg_type="message", callback=None):
         request_socket = self.context.socket(zmq.DEALER)
         address = 'tcp://%(address)s:%(port)s' % locals()
         request_socket.connect(address)
+
+        if callback:
+            def on_recv(message):
+                callback(json.loads(message[0]))
+
+            stream = ZMQStream(request_socket)
+            stream.on_recv(on_recv)
 
         request_socket.send_multipart((msg_type, json.dumps(message)))
 

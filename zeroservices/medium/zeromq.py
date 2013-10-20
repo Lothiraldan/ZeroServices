@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 import sys
 import zmq
+import time
 from zmq.eventloop import ioloop
 ioloop.install()
 from zmq.eventloop.zmqstream import ZMQStream
 import json
-import socket
 import logging
+import socket
 
 from zeroservices.exceptions import ServiceUnavailable
 
+from socket import gethostname, getaddrinfo, AF_INET, SOCK_STREAM, SOCK_DGRAM, IPPROTO_UDP, SOL_SOCKET, SO_REUSEADDR, IPPROTO_IP, IP_MULTICAST_TTL, IP_ADD_MEMBERSHIP, inet_aton
 from tornado import gen
 from os.path import join
 from os import makedirs
@@ -77,24 +79,17 @@ class ZeroMQMedium(object):
 
     #Multicast registration
     ANY = "0.0.0.0"
-    SENDERPORT = 32000
     MCAST_ADDR = "237.252.249.227"
-    MCAST_PORT = 1600
+    MCAST_PORT = 32000
 
-    def __init__(self, service_info, event_callback, msg_callback,
-            port_random=False):
-        self.service_info = service_info
-        self.services = {}
-        self.services_ressources = {}
-        self.events_republishers = []
+    def __init__(self, service, port_random=False):
+        self.service = service
+        self.service_info = service.service_info()
+        self.ioloop = ioloop.IOLoop.instance()
 
         self.logger = logging.getLogger('%s.%s' % (self.service_info['name'],
             'medium'))
         self.logger.setLevel(logging.DEBUG)
-
-        # Callbacks
-        self.event_callback = event_callback
-        self.msg_callback = msg_callback
 
         # ØMQ Sockets
         self.context = zmq.Context.instance()
@@ -122,17 +117,19 @@ class ZeroMQMedium(object):
         self.service_info['server_port'] = self.server_port
         self.service_info['pub_port'] = self.pub_port
 
-        # Save current service info
-        for ressource in service_info['ressources']:
-            self.services_ressources[ressource] = {'me': '127.0.0.1',
-                'pub_port': self.pub_port, 'server_port': self.server_port,
-                'address': '127.0.0.1'}
-
         self.logger.info('Start %s, listen to %s and publish to %s' %
             (self.service_info['name'], self.server_port, self.pub_port))
 
+        self.address = getaddrinfo(gethostname(), None, AF_INET, SOCK_STREAM)[0][4][0]
+
+        # import sys
+        # self.ioloop.instance().handle_callback_exception(lambda *args: raise Exception(args))
+
     def start(self):
-        ioloop.IOLoop.instance().start()
+        self.ioloop.start()
+
+    def stop(self):
+        self.ioloop.stop()
 
     def add_server_entrypoint(self, path=None, port=None, publish=False,
             callback=None):
@@ -164,13 +161,14 @@ class ZeroMQMedium(object):
         return socket_path, socket
 
     def create_udp_socket(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock = socket.socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+        sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         if hasattr(socket, 'SO_REUSEPORT'):
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-            socket.inet_aton(self.MCAST_ADDR) + socket.inet_aton(self.ANY))
+            sock.setsockopt(SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        sock.setsockopt(IPPROTO_IP, IP_MULTICAST_TTL, 255)
+        sock.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP,
+            inet_aton(self.MCAST_ADDR) + inet_aton(self.ANY))
+
         sock.bind((self.ANY, self.MCAST_PORT))
         return sock
 
@@ -178,7 +176,7 @@ class ZeroMQMedium(object):
         self.logger.info('Register')
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
             socket.IPPROTO_UDP)
-        sock.bind((self.ANY, self.SENDERPORT))
+        sock.bind((self.ANY, 0))
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -192,12 +190,12 @@ class ZeroMQMedium(object):
 
         self.logger.info('Process sub, message_type: %s, data: %s' %
             (message_type, data))
-        self.event_callback(message_type, data)
+        self.service.on_event(message_type, data)
 
-        for socket in self.events_republishers:
-            self.logger.info('Republish %s on %s' % (message[0], socket))
-            import time; time.sleep(1)
-            socket.send(message[0])
+        # for socket in self.events_republishers:
+        #     self.logger.info('Republish %s on %s' % (message[0], socket))
+        #     import time; time.sleep(1)
+        #     socket.send(message[0])
 
     @gen.coroutine
     def process_raw_query(self, raw_message):
@@ -209,20 +207,23 @@ class ZeroMQMedium(object):
             (message_type, message))
 
         if message_type == 'register':
-            self.save_register_info(message)
+            self.service.on_registration_message(message)
         else:
-            result = yield gen.Task(self.msg_callback, **message)
-            self.server.send_multipart((sender_uuid, json.dumps(result)))
+            self.service.on_message(message_type, message)
+            # result = yield gen.Task(self.msg_callback, **message)
+            # self.server.send_multipart((sender_uuid, json.dumps(result)))
 
     def process_register(self, *args):
         data, address = self.udp_socket.recvfrom(1024)
         self.logger.info('Process register, data: %s, from %s' %
             (data, address[0]))
         data = json.loads(data)
+        address = (address[0], self.MCAST_PORT)
         data['address'] = address[0]
-        if self.save_register_info(data):
-            self.register_to(data)
-        self.logger.info('Self ressources map: %s' % self.services_ressources)
+        self.service.on_registration_message(data)
+        # if self.save_register_info(data):
+        #     self.register_to(data)
+        # self.logger.info('Self ressources map: %s' % self.services_ressources)
 
     def save_register_info(self, data):
         service_name = data.pop('name')
@@ -250,6 +251,27 @@ class ZeroMQMedium(object):
 
         return True
 
+    def send_registration_answer(self, data):
+        sock = self.context.socket(zmq.DEALER)
+        sock.connect('tcp://%s:%s' % (data['address'], data['server_port']))
+        info = self.service_info
+
+        # Find my local address
+        s = socket.socket(AF_INET, SOCK_STREAM)
+        s.connect((data['address'], data['server_port']))
+        info['address'] = s.getsockname()[0]
+
+        self.logger.info('Sending my registration info to %s' % data['address'])
+        sock.send_multipart(('register', json.dumps(self.service_info)))
+        sock.close()
+
+    def connect_to_node(self, data):
+        self.logger.debug('Connecting my sub socket to tcp://%s:%s' %
+            (data['address'], data['pub_port']))
+        self.sub.connect('tcp://%s:%s' % (data['address'], data['pub_port']))
+        # Wait for subscribing process to be completed
+        time.sleep(0.01)
+
     def register_to(self, data):
         sock = self.context.socket(zmq.DEALER)
         sock.connect('tcp://%s:%s' % (data['address'], data['server_port']))
@@ -262,6 +284,14 @@ class ZeroMQMedium(object):
     def publish(self, event_type, event_data):
         self.logger.debug("Publish %s %s" % (event_type, event_data))
         self.pub.send('%s %s' % (event_type, json.dumps(event_data)))
+
+    def send(self, address, port, message, msg_type="message"):
+        request_socket = self.context.socket(zmq.DEALER)
+        address = 'tcp://%(address)s:%(port)s' % locals()
+        request_socket.connect(address)
+
+        request_socket.send_multipart((msg_type, json.dumps(message)))
+
 
     def call(self, collection, msg_type="service", callback=None, **kwargs):
         try:
@@ -292,3 +322,4 @@ class ZeroMQMedium(object):
         self.pub.close()
         self.sub.close()
         self.server.close()
+        self.ioloop.remove_handler(self.udp_socket.fileno())

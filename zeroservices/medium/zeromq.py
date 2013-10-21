@@ -16,6 +16,7 @@ from socket import gethostname, getaddrinfo, AF_INET, SOCK_STREAM, SOCK_DGRAM, I
 from tornado import gen
 from os.path import join
 from os import makedirs
+from uuid import uuid4
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -83,7 +84,7 @@ class ZeroMQMedium(object):
     MCAST_ADDR = "237.252.249.227"
     MCAST_PORT = 32000
 
-    def __init__(self, service, port_random=False, ioloop=None):
+    def __init__(self, service, port_random=False, ioloop=None, node_id=None):
         self.service = service
         self.service_info = service.service_info()
 
@@ -102,11 +103,18 @@ class ZeroMQMedium(object):
             bind=False))
         self.sub.on_recv(self.process_sub)
 
+        # Node id
+        if node_id is None:
+            node_id = uuid4().hex
+        self.node_id = node_id
+
         if port_random:
             self.server, self.server_port = stream(self.context,
                 zmq.ROUTER, addr='tcp://*', bind=True, random=True)
             self.server = ZMQStream(self.server)
             self.server.on_recv(self.process_raw_query)
+            # Set node id
+            self.server.socket.setsockopt(zmq.IDENTITY, self.node_id)
 
             self.pub, self.pub_port = stream(self.context, zmq.PUB,
                 addr='tcp://*', bind=True, random=True)
@@ -119,6 +127,7 @@ class ZeroMQMedium(object):
 
         self.service_info['server_port'] = self.server_port
         self.service_info['pub_port'] = self.pub_port
+        self.service_info['node_id'] = self.node_id
 
         self.logger.info('Start %s, listen to %s and publish to %s' %
             (self.service_info['name'], self.server_port, self.pub_port))

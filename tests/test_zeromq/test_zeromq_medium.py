@@ -34,15 +34,35 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.assertEqual(service2_registration_message['name'], 'Service 1')
         self.assertEqual(service2_registration_message['pub_port'], self.service1.medium.pub_port)
         self.assertEqual(service2_registration_message['server_port'], self.service1.medium.server_port)
+        self.assertEqual(service2_registration_message['node_id'], self.service1.medium.node_id)
 
         self.assertEqual(self.service1.on_registration_message.call_count, 1)
         service1_registration_message = self.service1.on_registration_message.call_args[0][0]
         self.assertEqual(service1_registration_message['name'], 'Service 1')
         self.assertEqual(service1_registration_message['pub_port'], self.service1.medium.pub_port)
         self.assertEqual(service1_registration_message['server_port'], self.service1.medium.server_port)
+        self.assertEqual(service1_registration_message['node_id'], self.service1.medium.node_id)
 
         self.assertEqual(service2_registration_message['address'],
                          service1_registration_message['address'])
+
+    def test_register_custom_node_id(self):
+        self.service1.medium.close()
+
+        # Set node id
+        service = generate_zeromq_medium({'name': 'custom'}, node_id='custom')
+        service.medium.register()
+
+        # Same ioloop for both services
+        self.service2.medium.start()
+
+        self.assertEqual(self.service2.on_registration_message.call_count, 1)
+        service2_registration_message = self.service2.on_registration_message.call_args[0][0]
+        self.assertEqual(service2_registration_message['name'], 'custom')
+        self.assertEqual(service2_registration_message['pub_port'], service.medium.pub_port)
+        self.assertEqual(service2_registration_message['server_port'], service.medium.server_port)
+        self.assertEqual(service2_registration_message['node_id'], service.medium.node_id)
+
 
     def test_register_answer(self):
         self.service1.medium.register()

@@ -7,14 +7,14 @@ def run_poller_for(medium, timeout):
     thread = Thread(target=medium.loop, args=(timeout,))
     thread.start()
 
-def generate_zeromq_medium(service_info):
+def generate_zeromq_medium(service_info, node_id=None):
 
     class TestService(object):
 
         def __init__(self):
             self.service_info = Mock()
             self.service_info.return_value = service_info
-            self.medium = ZeroMQMedium(self, port_random=True)
+            self.medium = ZeroMQMedium(self, port_random=True, node_id=node_id)
             self.on_registration_message = Mock()
             self.on_registration_message.side_effect = self.stop_loop
 

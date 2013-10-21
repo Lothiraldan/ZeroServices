@@ -112,7 +112,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
         # Send message with default message_type
         message = {'hello': 'world'}
-        self.service2.medium.send(r_msg['address'], r_msg['server_port'], message)
+        self.service2.medium.send(r_msg, message)
 
         self.service1.medium.start()
 
@@ -123,7 +123,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         # Send message with custom message_type
         message = {'hello': 'world'}
         message_type = 'Custom'
-        self.service2.medium.send(r_msg['address'], r_msg['server_port'], message, message_type)
+        self.service2.medium.send(r_msg, message, message_type)
 
         self.service1.medium.start()
 
@@ -150,8 +150,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         stop = Mock()
         stop.side_effect = lambda *args, **kwargs: self.service2.medium.stop()
 
-        self.service2.medium.send(r_msg['address'], r_msg['server_port'],
-                                  message, callback=stop)
+        self.service2.medium.send(r_msg, message, callback=stop)
         self.service1.medium.start()
 
         self.assertEqual(stop.call_count, 1)

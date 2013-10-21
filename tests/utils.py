@@ -4,8 +4,18 @@ import json
 import socket
 import logging
 
+from mock import Mock
+
 from zeroservices import Service
 from zeroservices.exceptions import ServiceUnavailable
+
+
+class TestMedium(object):
+
+    def __init__(self):
+        self.send_registration_answer = Mock()
+        self.send = Mock()
+
 
 class ServiceRegistry(object):
     SERVICES = {}

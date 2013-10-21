@@ -1,28 +1,51 @@
-# import unittest
+import unittest
 
-# from zeroservices import Service
-# from zeroservices.service import RessourceCollection, Ressource
-# from mock import Mock, call, create_autospec
-
-# from tornado.testing import AsyncTestCase
+from zeroservices import BaseService
+from utils import TestMedium
+from mock import call
 
 
-# def sample_service():
-#     class SampleService(Service):
-#         pass
-#     return SampleService
+class BaseServiceTestCase(unittest.TestCase):
 
-# def sample_collection():
-#     class SampleCollection(RessourceCollection):
-#         get = Mock()
-#         create = Mock()
-#         list = Mock()
-#     return SampleCollection
+    def setUp(self):
+        self.medium = TestMedium()
+        self.service = BaseService(self.medium)
 
-# def sample_ressource():
-#     class SampleRessource(Ressource):
-#         pass
-#     return SampleRessource
+    def test_on_registration(self):
+        node_info = {'node_id': 'sample', 'name': 'Sample Service'}
+
+        self.service.on_registration_message(node_info)
+        self.assertEqual(self.service.nodes_directory,
+                         {node_info['node_id']: node_info})
+
+        self.assertEqual(self.medium.send_registration_answer.call_count, 1)
+        mock_call = self.medium.send_registration_answer.call_args
+        self.assertEqual(mock_call, call(node_info))
+
+    def test_register_twice(self):
+        node_info = {'node_id': 'sample', 'name': 'Sample Service'}
+
+        self.service.on_registration_message(node_info)
+        self.assertEqual(self.service.nodes_directory,
+                         {node_info['node_id']: node_info})
+        self.medium.send_registration_answer.reset_mock()
+
+        self.service.on_registration_message(node_info)
+        self.assertEqual(self.service.nodes_directory,
+                         {node_info['node_id']: node_info})
+
+        self.assertEqual(self.medium.send_registration_answer.call_count, 0)
+
+    def test_call(self):
+        node_info = {'node_id': 'sample', 'name': 'Sample Service'}
+
+        self.service.on_registration_message(node_info)
+        message = {'content': 'Coucou'}
+        self.service.send(node_info['node_id'], message)
+
+        self.assertEqual(self.medium.send.call_count, 1)
+        mock_call = self.medium.send.call_args
+        self.assertEqual(mock_call, call(node_info, message))
 
 # class ServiceRegisterTestCase(unittest.TestCase):
 

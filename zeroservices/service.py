@@ -15,6 +15,24 @@ logging.basicConfig(level=logging.DEBUG)
 DEFAULT_MEDIUM = ZeroMQMedium
 
 
+class BaseService(object):
+
+    def __init__(self, medium):
+        self.medium = medium
+        self.nodes_directory = {}
+
+    def on_registration_message(self, node_info):
+        if node_info['node_id'] in self.nodes_directory:
+            return
+
+        self.nodes_directory[node_info['node_id']] = node_info
+
+        self.medium.send_registration_answer(node_info)
+
+    def send(self, node_id, message):
+        self.medium.send(self.nodes_directory[node_id], message)
+
+
 class Service(object):
     name = None
     ressources = []

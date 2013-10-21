@@ -295,7 +295,9 @@ class ZeroMQMedium(object):
         self.logger.debug("Publish %s %s" % (event_type, event_data))
         self.pub.send('%s %s' % (event_type, json.dumps(event_data)))
 
-    def send(self, address, port, message, msg_type="message", callback=None):
+    def send(self, node_info, message, msg_type="message", callback=None):
+        address = node_info['address']
+        port = node_info['server_port']
         request_socket = self.context.socket(zmq.DEALER)
         address = 'tcp://%(address)s:%(port)s' % locals()
         request_socket.connect(address)

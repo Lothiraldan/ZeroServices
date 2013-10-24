@@ -22,10 +22,14 @@ class BaseService(object):
         self.nodes_directory = {}
 
     def on_registration_message(self, node_info):
+        if node_info['node_id'] == self.medium.node_id:
+            return
+
         if node_info['node_id'] in self.nodes_directory:
             return
 
         self.nodes_directory[node_info['node_id']] = node_info
+        self.medium.connect_to_node(node_info)
         self.medium.send_registration_answer(node_info)
         self.on_new_node(node_info)
 
@@ -34,6 +38,10 @@ class BaseService(object):
 
     def send(self, node_id, message):
         self.medium.send(self.nodes_directory[node_id], message)
+
+    def main(self):
+        self.medium.register()
+        self.medium.start()
 
 
 class Service(object):

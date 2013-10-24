@@ -13,8 +13,10 @@ from zeroservices.exceptions import ServiceUnavailable
 class TestMedium(object):
 
     def __init__(self):
+        self.node_id = None
         self.send_registration_answer = Mock()
         self.send = Mock()
+        self.connect_to_node = Mock()
 
 
 class ServiceRegistry(object):

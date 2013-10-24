@@ -23,6 +23,10 @@ class BaseServiceTestCase(unittest.TestCase):
         mock_call = self.medium.send_registration_answer.call_args
         self.assertEqual(mock_call, call(node_info))
 
+        self.assertEqual(self.medium.connect_to_node.call_count, 1)
+        mock_call = self.medium.connect_to_node.call_args
+        self.assertEqual(mock_call, call(node_info))
+
         self.assertEqual(self.service.on_new_node.call_count, 1)
         mock_call = self.service.on_new_node.call_args
         self.assertEqual(mock_call, call(node_info))

@@ -132,15 +132,12 @@ class ZeroMQMedium(object):
         self.logger.info('Start %s, listen to %s and publish to %s' %
             (self.service_info['name'], self.server_port, self.pub_port))
 
-        self.address = getaddrinfo(gethostname(), None, AF_INET, SOCK_STREAM)[0][4][0]
-
-        # import sys
-        # self.ioloop.instance().handle_callback_exception(lambda *args: raise Exception(args))
-
     def start(self):
+        self.logger.debug('Start ioloop')
         self.ioloop.start()
 
     def stop(self):
+        self.logger.debug('Stop ioloop')
         self.ioloop.stop()
 
     def add_server_entrypoint(self, path=None, port=None, publish=False,
@@ -202,7 +199,11 @@ class ZeroMQMedium(object):
 
         self.logger.info('Process sub, message_type: %s, data: %s' %
             (message_type, data))
-        self.service.on_event(message_type, data)
+
+        if message_type == 'close':
+            self.service.on_node_close(data)
+        else:
+            self.service.on_event(message_type, data)
 
         # for socket in self.events_republishers:
         #     self.logger.info('Republish %s on %s' % (message[0], socket))
@@ -234,32 +235,6 @@ class ZeroMQMedium(object):
         # if self.save_register_info(data):
         #     self.register_to(data)
         # self.logger.info('Self ressources map: %s' % self.services_ressources)
-
-    def save_register_info(self, data):
-        service_name = data.pop('name')
-        if service_name in self.services:
-            return False
-
-        if service_name == self.service_info['name']:
-            return False
-
-        self.logger.debug('Connecting my sub socket to tcp://%s:%s' %
-            (data['address'], data['pub_port']))
-        self.sub.connect('tcp://%s:%s' % (data['address'], data['pub_port']))
-
-        # Find my ip to reach peer
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((data['address'], data['server_port']))
-        data['me'] = s.getsockname()[0]
-
-        # Service ressources
-        ressources = data.pop('ressources', [])
-        for ressource in ressources:
-            self.services_ressources[ressource] = data
-
-        self.services[service_name] = data
-
-        return True
 
     def send_registration_answer(self, data):
         sock = self.context.socket(zmq.DEALER)
@@ -309,8 +284,8 @@ class ZeroMQMedium(object):
             stream = ZMQStream(request_socket)
             stream.on_recv(on_recv)
 
+        self.logger.info('Send %s/%s to %s' % (msg_type, json.dumps(message), address))
         request_socket.send_multipart((msg_type, json.dumps(message)))
-
 
     def call(self, collection, msg_type="service", callback=None, **kwargs):
         try:
@@ -338,7 +313,11 @@ class ZeroMQMedium(object):
 
     def close(self):
         self.logger.info('Close medium')
-        self.pub.close()
+        self.publish('close', self.service_info)
+        self.pub.flush()
+
+        # Stop receiving data
+        self.ioloop.remove_handler(self.udp_socket.fileno())
         self.sub.close()
         self.server.close()
-        self.ioloop.remove_handler(self.udp_socket.fileno())
+        self.pub.close()

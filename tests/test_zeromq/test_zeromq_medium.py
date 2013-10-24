@@ -16,8 +16,10 @@ from utils import generate_zeromq_medium
 class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.service1 = generate_zeromq_medium({'name': 'Service 1'})
-        self.service2 = generate_zeromq_medium({'name': 'Service 2'})
+        from zmq.eventloop.ioloop import IOLoop
+        self.ioloop = IOLoop.instance()
+        self.service1 = generate_zeromq_medium({'name': 'Service 1'}, ioloop=self.ioloop)
+        self.service2 = generate_zeromq_medium({'name': 'Service 2'}, ioloop=self.ioloop)
 
     def tearDown(self):
         self.service1.medium.close()
@@ -27,7 +29,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.service1.medium.register()
 
         # Same ioloop for both services
-        self.service2.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(self.service2.on_registration_message.call_count, 1)
         service2_registration_message = self.service2.on_registration_message.call_args[0][0]
@@ -54,7 +56,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         service.medium.register()
 
         # Same ioloop for both services
-        self.service2.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(self.service2.on_registration_message.call_count, 1)
         service2_registration_message = self.service2.on_registration_message.call_args[0][0]
@@ -68,7 +70,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.service1.medium.register()
 
         # Same ioloop for both services
-        self.service2.medium.start()
+        self.ioloop.start()
 
         service2_registration_message = self.service2.on_registration_message.call_args[0][0]
         address = service2_registration_message['address']
@@ -76,7 +78,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         # Send answer
         self.service2.medium.send_registration_answer(service2_registration_message)
 
-        self.service1.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(self.service1.on_registration_message.call_count, 2)
         service1_registration_message = self.service1.on_registration_message.call_args[0][0]
@@ -89,14 +91,14 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.service1.medium.register()
 
         # Same ioloop for both services
-        self.service2.medium.start()
+        self.ioloop.start()
 
         service2_registration_message = self.service2.on_registration_message.call_args[0][0]
         self.service2.medium.connect_to_node(service2_registration_message)
 
         self.service1.medium.publish('Test', 'Test')
 
-        self.service2.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(self.service2.on_event.call_count, 1)
         service2_event_message = self.service2.on_event.call_args
@@ -105,8 +107,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
     def test_direct_message(self):
         self.service1.medium.register()
 
-        # Same ioloop for both services
-        self.service2.medium.start()
+        self.ioloop.start()
 
         r_msg = self.service2.on_registration_message.call_args[0][0]
 
@@ -114,7 +115,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         message = {'hello': 'world'}
         self.service2.medium.send(r_msg, message)
 
-        self.service1.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(self.service1.on_message.call_count, 1)
         service1_message = self.service1.on_message.call_args
@@ -125,7 +126,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         message_type = 'Custom'
         self.service2.medium.send(r_msg, message, message_type)
 
-        self.service1.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(self.service1.on_message.call_count, 2)
         service1_message = self.service1.on_message.call_args
@@ -138,8 +139,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
         self.service1.medium.register()
 
-        # Same ioloop for both services
-        self.service2.medium.start()
+        self.ioloop.start()
 
         r_msg = self.service2.on_registration_message.call_args[0][0]
 
@@ -151,12 +151,48 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         stop.side_effect = lambda *args, **kwargs: self.service2.medium.stop()
 
         self.service2.medium.send(r_msg, message, callback=stop)
-        self.service1.medium.start()
+        self.ioloop.start()
 
         self.assertEqual(stop.call_count, 1)
         response = stop.call_args
 
         self.assertEqual(response, call(return_value))
+
+
+class ZeroMQMediumRegistrationTestCase(ZeroMQMediumRegistrationTestCase):
+
+    def tearDown(self):
+        self.service2.medium.close()
+
+    def test_close(self):
+        # Install ioloop onlt on these services
+        # Do not process close message
+        self.service1.on_node_close.side_effect = self.service1.stop_loop
+        self.service2.on_node_close.side_effect = self.service2.stop_loop
+
+        self.service1.medium.register()
+        self.ioloop.start()
+
+        service2_registration_message = self.service2.on_registration_message.call_args[0][0]
+        self.service2.medium.connect_to_node(service2_registration_message)
+
+        self.service2.medium.register()
+        self.ioloop.start()
+
+        # Connect both of them
+        service1_registration_message = self.service1.on_registration_message.call_args[0][0]
+        self.service1.medium.connect_to_node(service1_registration_message)
+
+        self.assertEqual(self.service2.on_registration_message.call_count, 2)
+        self.assertEqual(self.service1.on_registration_message.call_count, 2)
+
+        self.service2.on_node_close.reset_mock()
+        self.service1.medium.close()
+
+        self.ioloop.start()
+        self.assertEqual(self.service2.on_node_close.call_count, 1)
+        service2_close_message = self.service2.on_node_close.call_args[0][0]
+        self.assertEqual(service2_registration_message['node_id'], self.service1.medium.node_id)
 
 if __name__ == '__main__':
     unittest.main()

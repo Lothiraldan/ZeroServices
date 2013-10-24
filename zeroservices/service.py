@@ -26,8 +26,11 @@ class BaseService(object):
             return
 
         self.nodes_directory[node_info['node_id']] = node_info
-
         self.medium.send_registration_answer(node_info)
+        self.on_new_node(node_info)
+
+    def on_new_node(self, node_info):
+        pass
 
     def send(self, node_id, message):
         self.medium.send(self.nodes_directory[node_id], message)

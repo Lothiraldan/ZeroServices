@@ -2,13 +2,10 @@
 
 from distutils.core import setup
 
-setup(name='smartforge',
+setup(name='ZeroServices',
       version='0.1',
-      description='SmartForge',
+      description='ZeroServices',
       author='FELD Boris',
       author_email='lothiraldan@gmail.com',
-      packages=['smartforge', 'smartforge.bin', 'smartforge.services', 'smartforge.ui'],
-      package_data={
-        'smartforge.ui': ['smartforge/ui/templates/*', 'smartforge/ui/static/*']
-      }
+      packages=['zeroservices', 'zeroservices.medium'],
      )

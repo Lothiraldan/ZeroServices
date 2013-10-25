@@ -1,8 +1,8 @@
 <html>
     <head>
-        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
-        <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
-        <script src="http://jquery-json.googlecode.com/files/jquery.json-2.2.min.js"></script>
+        <link href="static/bootstrap.min.css" rel="stylesheet">
+        <script src="static/jquery-2.0.3.min.js"></script>
+        <script src="static/jquery.json-2.2.min.js"></script>
         <style>
             form#chatform textarea {
                 width: 540px;
@@ -35,7 +35,7 @@
                 <div class="col-lg-2" style="min-height: 500px; margin: 10px 0 10px 0; ">
                     <h3 class="text-muted">Users</h3>
                     <ul id="roster">
-                        <li class="current"><a href="#" id="currentuser">Bob</a></li>
+                        <li class="current">{{ name }} (You)</li>
                     </ul>
                 </div>
             </div>
@@ -58,8 +58,11 @@
             (function($){
             $.extend({
                 websocketSettings: {
-                    open: function(){},
-                    close: function(){},
+                    open: function(){console.log('OPEN');
+                    addMsg(null, 'Welcome {{ name }}');},
+                    close: function(){
+                        addMsg(null, 'You leaved');
+                        $("#chatmessage").prop('disabled', 'disabled');},
                     message: function(){},
                     options: {},
                     events: {}
@@ -75,7 +78,6 @@
                         .bind('message', $.websocketSettings.message)
                         .bind('message', function(e){
                             var m = $.evalJSON(e.originalEvent.data);
-                            console.log(m);
                             var h = $.websocketSettings.events[m.type];
                             if (h) h.call(this, m);
                         });
@@ -95,18 +97,40 @@
 
 
             $(function() {
+                var node_ids = {};
+
                 var ws = $.websocket("ws://127.0.0.1:{{ port }}/websocket", {
-                    open: function() {  },
-                    close: function() {  },
                     events: {
                         message: function(e) {
                             addMsg(e.username, e.message);
                         },
-                        new_user: function(e) {
-                            console.log(e);
+                        direct_message: function(e) {
+                            addDirectMsg(e.from, e.message);
+                        },
+                        user_join: function(e) {
+                            node_ids[e.name] = e.id;
                             userJoin(e.name, e.id);
                             addMsg(null, 'User ' + e.name + ' joined')
+                        },
+                        user_leave: function(e) {
+                            userLeaves(e.id);
+                            addMsg(null, 'User ' + e.name + ' leaved')
                         }
+                    }
+                });
+
+                $('#chatform').on('submit', function(e) {
+                    e.preventDefault();
+                    var data = $('#chatmessage').val();
+                    $('#chatmessage').val(null);
+                    if(data.match("^/msg")){
+                        // Private message
+                        data = data.split(' ');
+                        addMsg('{{ name }} -> ' + data[1], data[2]);
+                        ws.send('direct_message', {'message': data[2], 'to': node_ids[data[1]]});
+                    } else {
+                        addMsg('{{ name }}', data);
+                        ws.send('message', {'message': data});
                     }
                 });
 
@@ -122,6 +146,11 @@
                 } else {
                     $("#chatform textarea").append(message + "\n");
                 }
+            }
+
+            function addDirectMsg(username, message) {
+                $("#chatform textarea").append("[" + username + " -> {{ name }}]: " + message + "\n");
+
             }
 
             /* Add user to roster */

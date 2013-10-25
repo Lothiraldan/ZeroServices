@@ -36,12 +36,18 @@ class BaseService(object):
     def on_new_node(self, node_info):
         pass
 
-    def send(self, node_id, message):
-        self.medium.send(self.nodes_directory[node_id], message)
+    def send(self, node_id, message, **kwargs):
+        self.medium.send(self.nodes_directory[node_id], message, **kwargs)
+
+    def publish(self, *args):
+        self.medium.publish(*args)
 
     def main(self):
         self.medium.register()
         self.medium.start()
+
+    def close(self):
+        self.medium.close()
 
 
 class Service(object):

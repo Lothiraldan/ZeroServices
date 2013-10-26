@@ -64,7 +64,6 @@ class WebSocketHandler(websocket.WebSocketHandler):
                               'id': node_id, 'name': node['name']})
             self.write_message(msg)
 
-
     def on_close(self):
         clients.remove(self)
 

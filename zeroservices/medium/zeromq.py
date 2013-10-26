@@ -10,8 +10,6 @@ import json
 import logging
 import socket
 
-from zeroservices.exceptions import ServiceUnavailable
-
 from socket import gethostname, getaddrinfo, AF_INET, SOCK_STREAM, SOCK_DGRAM, IPPROTO_UDP, SOL_SOCKET, SO_REUSEADDR, IPPROTO_IP, IP_MULTICAST_TTL, IP_ADD_MEMBERSHIP, inet_aton
 from tornado import gen
 from os.path import join
@@ -286,30 +284,6 @@ class ZeroMQMedium(object):
 
         self.logger.info('Send %s/%s to %s' % (msg_type, json.dumps(message), address))
         request_socket.send_multipart((msg_type, json.dumps(message)))
-
-    def call(self, collection, msg_type="service", callback=None, **kwargs):
-        try:
-            service_address = self.services_ressources[collection]
-        except KeyError:
-            raise ServiceUnavailable('Service %s is unavailable. %s' % (collection, self.services_ressources))
-
-        # Create socket
-        request_socket = self.context.socket(zmq.DEALER)
-        address = 'tcp://%(address)s:%(server_port)s' % service_address
-        request_socket.connect(address)
-
-        stream = ZMQStream(request_socket)
-        if callback:
-            stream.on_recv(callback)
-
-        # Make call
-        kwargs = {str(key): value for key, value in kwargs.items()}
-        kwargs['collection'] = collection
-        self.logger.info("Call %s with %s" % (collection, kwargs))
-        request_socket.send_multipart((msg_type, json.dumps(kwargs)))
-
-        if not callback:
-            return json.loads(request_socket.recv_multipart()[0])
 
     def close(self):
         self.logger.info('Close medium')

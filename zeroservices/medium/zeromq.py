@@ -255,15 +255,6 @@ class ZeroMQMedium(object):
         # Wait for subscribing process to be completed
         time.sleep(0.01)
 
-    def register_to(self, data):
-        sock = self.context.socket(zmq.DEALER)
-        sock.connect('tcp://%s:%s' % (data['address'], data['server_port']))
-        info = self.service_info
-        info['address'] = data['me']
-        self.logger.info('Sending my registration info to %s' % data['address'])
-        sock.send_multipart(('register', json.dumps(self.service_info)))
-        sock.close()
-
     def publish(self, event_type, event_data):
         self.logger.debug("Publish %s %s" % (event_type, event_data))
         self.pub.send('%s %s' % (event_type, json.dumps(event_data)))

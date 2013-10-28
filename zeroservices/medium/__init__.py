@@ -1,1 +1,1 @@
-from zeromq import ZeroMQMedium
+from .zeromq import ZeroMQMedium

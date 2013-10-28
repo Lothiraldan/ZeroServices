@@ -25,6 +25,9 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.service1.medium.close()
         self.service2.medium.close()
 
+    def stop_loop(self, *args, **kwargs):
+        self.ioloop.stop()
+
     def test_register(self):
         self.service1.medium.register()
 
@@ -148,7 +151,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
         # Create stop callback which stop ioloop
         stop = Mock()
-        stop.side_effect = lambda *args, **kwargs: self.service2.medium.stop()
+        stop.side_effect = self.stop_loop
 
         self.service2.medium.send(r_msg, message, callback=stop)
         self.ioloop.start()
@@ -167,8 +170,9 @@ class ZeroMQMediumRegistrationTestCase(ZeroMQMediumRegistrationTestCase):
     def test_close(self):
         # Install ioloop onlt on these services
         # Do not process close message
-        self.service1.on_node_close.side_effect = self.service1.stop_loop
-        self.service2.on_node_close.side_effect = self.service2.stop_loop
+
+        self.service1.on_peer_leave.side_effect = self.stop_loop
+        self.service2.on_peer_leave.side_effect = self.stop_loop
 
         self.service1.medium.register()
         self.ioloop.start()
@@ -186,12 +190,12 @@ class ZeroMQMediumRegistrationTestCase(ZeroMQMediumRegistrationTestCase):
         self.assertEqual(self.service2.on_registration_message.call_count, 2)
         self.assertEqual(self.service1.on_registration_message.call_count, 2)
 
-        self.service2.on_node_close.reset_mock()
+        self.service2.on_peer_leave.reset_mock()
         self.service1.medium.close()
 
         self.ioloop.start()
-        self.assertEqual(self.service2.on_node_close.call_count, 1)
-        service2_close_message = self.service2.on_node_close.call_args[0][0]
+        self.assertEqual(self.service2.on_peer_leave.call_count, 1)
+        service2_close_message = self.service2.on_peer_leave.call_args[0][0]
         self.assertEqual(service2_registration_message['node_id'], self.service1.medium.node_id)
 
 if __name__ == '__main__':

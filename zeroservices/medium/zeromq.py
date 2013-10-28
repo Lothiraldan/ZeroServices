@@ -199,7 +199,7 @@ class ZeroMQMedium(object):
             (message_type, data))
 
         if message_type == 'close':
-            self.service.on_node_close(data)
+            self.service.on_peer_leave(data)
         else:
             self.service.on_event(message_type, data)
 

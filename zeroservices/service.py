@@ -17,9 +17,16 @@ DEFAULT_MEDIUM = ZeroMQMedium
 
 class BaseService(object):
 
+    medium = None
+    nodes_directory = {}
+
     def __init__(self, medium):
         self.medium = medium
         self.nodes_directory = {}
+
+    def service_info(sefl):
+        """Subclass to return informations for registration
+        """
 
     def on_registration_message(self, node_info):
         if node_info['node_id'] == self.medium.node_id:
@@ -31,9 +38,18 @@ class BaseService(object):
         self.nodes_directory[node_info['node_id']] = node_info
         self.medium.connect_to_node(node_info)
         self.medium.send_registration_answer(node_info)
-        self.on_new_node(node_info)
+        self.on_peer_join(node_info)
 
-    def on_new_node(self, node_info):
+    def on_peer_join(self, node_info):
+        pass
+
+    def on_peer_leave(self, node_info):
+        pass
+
+    def on_message(self, *args, **kwargs):
+        pass
+
+    def on_event(self, *args, **kwargs):
         pass
 
     def send(self, node_id, message, **kwargs):

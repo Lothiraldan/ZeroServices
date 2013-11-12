@@ -24,20 +24,28 @@ class ChatService(BaseService):
         return {'name': self.username}
 
     def on_event(self, message_type, message):
+        """Called when a multicast message is received
+        """
         msg = {'type': message_type}
         msg.update(message)
         self.send_to_all_clients(json.dumps(msg))
 
     def on_message(self, message_type, **kwargs):
+        """Called when an unicast message is received
+        """
         msg = {'type': message_type}
         msg.update(kwargs)
         self.send_to_all_clients(json.dumps(msg))
 
-    def on_new_node(self, node_info):
+    def on_peer_join(self, node_info):
+        """Called when a new peer joins
+        """
         msg = json.dumps({'type': 'user_join', 'id': node_info['node_id'], 'name': node_info['name']})
         self.send_to_all_clients(msg)
 
-    def on_node_close(self, node_info):
+    def on_peer_leave(self, node_info):
+        """Called when a peer leaves
+        """
         msg = json.dumps({'type': 'user_leave', 'id': node_info['node_id'], 'name': node_info['name']})
         self.send_to_all_clients(msg)
 
@@ -49,7 +57,6 @@ class ChatService(BaseService):
 s = ChatService(sys.argv[1])
 clients = []
 
-
 class MainHandler(web.RequestHandler):
     def get(self):
         return self.render('chat.html', port=int(sys.argv[2]), name=sys.argv[1])
@@ -58,6 +65,8 @@ class MainHandler(web.RequestHandler):
 class WebSocketHandler(websocket.WebSocketHandler):
 
     def open(self):
+        """Called on new websocket connection
+        """
         clients.append(self)
         for node_id, node in s.nodes_directory.items():
             msg = json.dumps({'type': 'user_join',
@@ -65,9 +74,13 @@ class WebSocketHandler(websocket.WebSocketHandler):
             self.write_message(msg)
 
     def on_close(self):
+        """Called on websocket connection close
+        """
         clients.remove(self)
 
     def on_message(self, message):
+        """Called on websocket message
+        """
         message = json.loads(message)
         if message['type'] == 'message':
             msg = {'username': sys.argv[1], 'message': message['data']['message']}

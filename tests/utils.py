@@ -6,7 +6,6 @@ import logging
 
 from mock import Mock
 
-from zeroservices import Service
 from zeroservices.exceptions import ServiceUnavailable
 
 
@@ -71,14 +70,6 @@ def gen_service(base_service, save_entries=None):
             super(TestService, self).process_event(event)
 
     return TestService()
-
-def gen_sample_service(service_name, service_ressources, save_entries = None):
-
-    class SampleService(smartforge.Service):
-        name = service_name
-        ressources = service_ressources
-
-    return gen_service(SampleService, save_entries)
 
 # Test memory medium
 

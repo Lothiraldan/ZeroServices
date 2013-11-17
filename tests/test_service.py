@@ -1,6 +1,6 @@
 import unittest
 
-from zeroservices import BaseService
+from zeroservices import BaseService, RessourceService
 from utils import TestMedium
 from mock import call, Mock
 
@@ -8,8 +8,12 @@ from mock import call, Mock
 class BaseServiceTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.name = "TestService"
         self.medium = TestMedium()
-        self.service = BaseService(self.medium)
+        self.service = BaseService(self.name, self.medium)
+
+    def test_service_info(self):
+        self.assertEqual(self.service.service_info(), {'name': self.name})
 
     def test_on_registration(self):
         self.service.on_peer_join = Mock()
@@ -59,25 +63,41 @@ class BaseServiceTestCase(unittest.TestCase):
         mock_call = self.medium.send.call_args
         self.assertEqual(mock_call, call(node_info, message))
 
-# class ServiceRegisterTestCase(unittest.TestCase):
+class ServiceRegisterTestCase(unittest.TestCase):
 
-#     def test_register_ressource_collection(self):
-#         service = sample_service()()
+    def setUp(self):
+        self.name = "TestService"
+        self.medium = TestMedium()
+        self.service = RessourceService(self.name, self.medium)
 
-#         collection = sample_collection()()
-#         ressource_name = 'Test'
-#         collection.ressource_name = ressource_name
+    def test_service_info(self):
+        self.assertEqual(self.service.service_info(), {'name': self.name,
+                                                       'ressources': []})
 
-#         service.register(collection)
+    def test_on_registration(self):
+        ressource = 'TestRessource'
 
-#         # Check that collection is registered on our service...
-#         self.assertEqual(service.ressources_collections, {ressource_name:
-#             collection})
-#         self.assertEqual(service.ressources, [ressource_name])
+        self.service.on_peer_join = Mock()
+        node_info = {'node_id': 'sample', 'name': 'Sample Service',
+                     'ressources': [ressource]}
 
-#         # And not in base Service
-#         self.assertEqual(Service.ressources_collections, {})
-#         self.assertEqual(Service.ressources, [])
+        self.service.on_registration_message(node_info)
+        self.assertEqual(self.service.nodes_directory,
+                         {node_info['node_id']: node_info})
+        self.assertEqual(self.service.ressources_directory,
+                         {ressource: node_info['node_id']})
+
+        self.assertEqual(self.medium.send_registration_answer.call_count, 1)
+        mock_call = self.medium.send_registration_answer.call_args
+        self.assertEqual(mock_call, call(node_info))
+
+        self.assertEqual(self.medium.connect_to_node.call_count, 1)
+        mock_call = self.medium.connect_to_node.call_args
+        self.assertEqual(mock_call, call(node_info))
+
+        self.assertEqual(self.service.on_peer_join.call_count, 1)
+        mock_call = self.service.on_peer_join.call_args
+        self.assertEqual(mock_call, call(node_info))
 
 
 # class ServiceCollectionTestCase(unittest.TestCase):

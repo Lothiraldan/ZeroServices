@@ -20,13 +20,15 @@ class BaseService(object):
     medium = None
     nodes_directory = {}
 
-    def __init__(self, medium):
+    def __init__(self, name, medium):
+        self.name = name
         self.medium = medium
         self.nodes_directory = {}
 
-    def service_info(sefl):
+    def service_info(self):
         """Subclass to return informations for registration
         """
+        return {'name': self.name}
 
     def on_registration_message(self, node_info):
         if node_info['node_id'] == self.medium.node_id:
@@ -35,10 +37,13 @@ class BaseService(object):
         if node_info['node_id'] in self.nodes_directory:
             return
 
-        self.nodes_directory[node_info['node_id']] = node_info
+        self.save_new_node_info(node_info)
         self.medium.connect_to_node(node_info)
         self.medium.send_registration_answer(node_info)
         self.on_peer_join(node_info)
+
+    def save_new_node_info(self, node_info):
+        self.nodes_directory[node_info['node_id']] = node_info
 
     def on_peer_join(self, node_info):
         pass
@@ -66,23 +71,22 @@ class BaseService(object):
         self.medium.close()
 
 
-class Service(object):
+class RessourceService(BaseService):
     name = None
     ressources = []
-    ressources_collections = {}
 
-    def __init__(self, random=False, medium=None):
-        if medium is None:
-            medium = DEFAULT_MEDIUM
+    def __init__(self, name, medium):
+        super(RessourceService, self).__init__(name, medium)
+        self.ressources_directory = {}
 
-        self.medium = medium(self._register_info(), self.process_event,
-            self.process_query, True)
+    def service_info(self):
+        return {'name': self.name, 'ressources': self.ressources}
 
-        self.logger = logging.getLogger(self.name)
+    def save_new_node_info(self, node_info):
+        super(RessourceService, self).save_new_node_info(node_info)
 
-    def main(self):
-        self.medium.register()
-        self.medium.start()
+        for ressource in node_info.get('ressources', ()):
+            self.ressources_directory[ressource] = node_info['node_id']
 
     @gen.engine
     def process_query(self, collection, action, args={}, ressource_id=None,

@@ -19,6 +19,7 @@ class BaseService(object):
 
     medium = None
     nodes_directory = {}
+    name = None
 
     def __init__(self, name, medium):
         self.name = name
@@ -72,15 +73,14 @@ class BaseService(object):
 
 
 class RessourceService(BaseService):
-    name = None
-    ressources = []
 
     def __init__(self, name, medium):
         super(RessourceService, self).__init__(name, medium)
+        self.ressources = {}
         self.ressources_directory = {}
 
     def service_info(self):
-        return {'name': self.name, 'ressources': self.ressources}
+        return {'name': self.name, 'ressources': self.ressources.keys()}
 
     def save_new_node_info(self, node_info):
         super(RessourceService, self).save_new_node_info(node_info)
@@ -144,22 +144,14 @@ class RessourceService(BaseService):
         raise NotImplementedError()
 
     ### Utils
-    @classmethod
-    def register(cls, collection):
+    def register_ressource(self, collection):
         assert isinstance(collection, RessourceCollection)
 
         # Add self reference to collection
-        collection.service = cls
+        collection.service = self
 
         # Ressources collections
-        ressources_collections = copy(cls.ressources_collections)
-        ressources_collections[collection.ressource_name] = collection
-        cls.ressources_collections = ressources_collections
-
-        #Ressources
-        ressources = cls.ressources[:]
-        ressources.append(collection.ressource_name)
-        cls.ressources = ressources
+        self.ressources[collection.ressource_name] = collection
 
     def call(self, collection, **kwargs):
         self.logger.info("Call %s with %s" % (collection, kwargs))
@@ -175,7 +167,6 @@ class RessourceService(BaseService):
 
 class RessourceCollection(object):
 
-    __metaclass__ = ABCMeta
     ressource_name = None
     ressource_class = None
 
@@ -199,7 +190,6 @@ class RessourceCollection(object):
     def get(self, ressource_id):
         return self.instantiate(ressource_id=ressource_id)
 
-    @abstractmethod
     def list(self, where=None):
         pass
 

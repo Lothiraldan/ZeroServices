@@ -68,7 +68,6 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.assertEqual(service2_registration_message['server_port'], service.medium.server_port)
         self.assertEqual(service2_registration_message['node_id'], service.medium.node_id)
 
-
     def test_register_answer(self):
         self.service1.medium.register()
 

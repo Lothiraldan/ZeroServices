@@ -7,6 +7,7 @@ import logging
 from mock import Mock
 
 from zeroservices.exceptions import ServiceUnavailable
+from zeroservices.service import RessourceCollection
 
 
 class TestMedium(object):
@@ -21,6 +22,15 @@ class TestMedium(object):
 class ServiceRegistry(object):
     SERVICES = {}
     SERVICES_RESSOURCES = {}
+
+
+def sample_collection(sample_ressource_name):
+
+    class TestCollection(RessourceCollection):
+        ressource_name = sample_ressource_name
+
+    return TestCollection()
+
 
 def gen_service(base_service, save_entries=None):
 

@@ -84,13 +84,12 @@ class ZeroMQMedium(object):
 
     def __init__(self, service, port_random=False, ioloop=None, node_id=None):
         self.service = service
-        self.service_info = service.service_info()
 
         if ioloop is None:
             ioloop = IOLoop.instance()
         self.ioloop = ioloop
 
-        self.logger = logging.getLogger('%s.%s' % (self.service_info['name'],
+        self.logger = logging.getLogger('%s.%s' % (self.service.name,
             'medium'))
         self.logger.setLevel(logging.DEBUG)
 
@@ -123,12 +122,8 @@ class ZeroMQMedium(object):
         self.ioloop.add_handler(self.udp_socket.fileno(),
                                 self.process_register, IOLoop.READ)
 
-        self.service_info['server_port'] = self.server_port
-        self.service_info['pub_port'] = self.pub_port
-        self.service_info['node_id'] = self.node_id
-
         self.logger.info('Start %s, listen to %s and publish to %s' %
-            (self.service_info['name'], self.server_port, self.pub_port))
+            (self.service.name, self.server_port, self.pub_port))
 
     def start(self):
         self.logger.debug('Start ioloop')
@@ -137,6 +132,15 @@ class ZeroMQMedium(object):
     def stop(self):
         self.logger.debug('Stop ioloop')
         self.ioloop.stop()
+
+    def get_service_info(self):
+        base_service_info = self.service.service_info()
+
+        base_service_info['server_port'] = self.server_port
+        base_service_info['pub_port'] = self.pub_port
+        base_service_info['node_id'] = self.node_id
+
+        return base_service_info
 
     def add_server_entrypoint(self, path=None, port=None, publish=False,
             callback=None):
@@ -187,7 +191,7 @@ class ZeroMQMedium(object):
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        sock.sendto(json.dumps(self.service_info),
+        sock.sendto(json.dumps(self.get_service_info()),
                 (self.MCAST_ADDR, self.MCAST_PORT))
 
     def process_sub(self, message):
@@ -237,7 +241,7 @@ class ZeroMQMedium(object):
     def send_registration_answer(self, data):
         sock = self.context.socket(zmq.DEALER)
         sock.connect('tcp://%s:%s' % (data['address'], data['server_port']))
-        info = self.service_info
+        info = self.get_service_info()
 
         # Find my local address
         s = socket.socket(AF_INET, SOCK_STREAM)
@@ -245,7 +249,7 @@ class ZeroMQMedium(object):
         info['address'] = s.getsockname()[0]
 
         self.logger.info('Sending my registration info to %s' % data['address'])
-        sock.send_multipart(('register', json.dumps(self.service_info)))
+        sock.send_multipart(('register', json.dumps(info)))
         sock.close()
 
     def connect_to_node(self, data):
@@ -278,7 +282,7 @@ class ZeroMQMedium(object):
 
     def close(self):
         self.logger.info('Close medium')
-        self.publish('close', self.service_info)
+        self.publish('close', self.get_service_info())
         self.pub.flush()
 
         # Stop receiving data

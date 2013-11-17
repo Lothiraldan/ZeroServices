@@ -1,7 +1,7 @@
 import unittest
 
 from zeroservices import BaseService, RessourceService
-from utils import TestMedium
+from utils import TestMedium, sample_collection
 from mock import call, Mock
 
 
@@ -15,7 +15,7 @@ class BaseServiceTestCase(unittest.TestCase):
     def test_service_info(self):
         self.assertEqual(self.service.service_info(), {'name': self.name})
 
-    def test_on_registration(self):
+    def test_on_join(self):
         self.service.on_peer_join = Mock()
         node_info = {'node_id': 'sample', 'name': 'Sample Service'}
 
@@ -35,7 +35,7 @@ class BaseServiceTestCase(unittest.TestCase):
         mock_call = self.service.on_peer_join.call_args
         self.assertEqual(mock_call, call(node_info))
 
-    def test_register_twice(self):
+    def test_join_twice(self):
         self.service.on_peer_join = Mock()
         node_info = {'node_id': 'sample', 'name': 'Sample Service'}
 
@@ -74,7 +74,7 @@ class ServiceRegisterTestCase(unittest.TestCase):
         self.assertEqual(self.service.service_info(), {'name': self.name,
                                                        'ressources': []})
 
-    def test_on_registration(self):
+    def test_on_join(self):
         ressource = 'TestRessource'
 
         self.service.on_peer_join = Mock()
@@ -98,6 +98,14 @@ class ServiceRegisterTestCase(unittest.TestCase):
         self.assertEqual(self.service.on_peer_join.call_count, 1)
         mock_call = self.service.on_peer_join.call_args
         self.assertEqual(mock_call, call(node_info))
+
+    def test_ressource_registration(self):
+        ressource_name = 'TestCollection'
+        collection = sample_collection(ressource_name)
+
+        self.service.register_ressource(collection)
+        expected = {'name': self.name, 'ressources': [ressource_name]}
+        self.assertEqual(self.service.service_info(), expected)
 
 
 # class ServiceCollectionTestCase(unittest.TestCase):

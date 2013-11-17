@@ -17,11 +17,9 @@ from time import time
 class ChatService(BaseService):
 
     def __init__(self, username):
-        self.username = username
-        super(ChatService, self).__init__(ZeroMQMedium(self, port_random=True))
-
-    def service_info(self):
-        return {'name': self.username}
+        self.name = username
+        medium = ZeroMQMedium(self, port_random=True)
+        super(ChatService, self).__init__(username, medium)
 
     def on_event(self, message_type, message):
         """Called when a multicast message is received

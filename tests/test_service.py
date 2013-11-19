@@ -63,7 +63,7 @@ class BaseServiceTestCase(unittest.TestCase):
         mock_call = self.medium.send.call_args
         self.assertEqual(mock_call, call(node_info, message))
 
-class ServiceRegisterTestCase(unittest.TestCase):
+class RessourceServiceRegisterTestCase(unittest.TestCase):
 
     def setUp(self):
         self.name = "TestService"
@@ -106,6 +106,30 @@ class ServiceRegisterTestCase(unittest.TestCase):
         self.service.register_ressource(collection)
         expected = {'name': self.name, 'ressources': [ressource_name]}
         self.assertEqual(self.service.service_info(), expected)
+
+class RessourceServiceTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.name = "TestService"
+        self.medium = TestMedium()
+        self.service = RessourceService(self.name, self.medium)
+
+        self.ressource_name = 'TestCollection'
+        self.collection = sample_collection(self.ressource_name)
+        self.service.register_ressource(self.collection)
+
+    def test_ressource_query(self):
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2}
+        message = {'collection': self.ressource_name}
+        message.update(message_args)
+
+        response = {'response': 'Foo'}
+        self.collection.on_message.return_value = response
+
+        self.assertEqual(self.service.on_message(**message), response)
+
+        self.assertEqual(self.collection.on_message.call_count, 1)
+        self.assertEqual(self.collection.on_message.call_args, call(**message_args))
 
 
 # class ServiceCollectionTestCase(unittest.TestCase):

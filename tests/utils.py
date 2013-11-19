@@ -4,7 +4,7 @@ import json
 import socket
 import logging
 
-from mock import Mock
+from mock import Mock, create_autospec
 
 from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.service import RessourceCollection
@@ -26,10 +26,10 @@ class ServiceRegistry(object):
 
 def sample_collection(sample_ressource_name):
 
-    class TestCollection(RessourceCollection):
-        ressource_name = sample_ressource_name
+    collection = create_autospec(RessourceCollection, True)
+    collection.ressource_name = sample_ressource_name
 
-    return TestCollection()
+    return collection
 
 
 def gen_service(base_service, save_entries=None):

@@ -88,6 +88,10 @@ class RessourceService(BaseService):
         for ressource in node_info.get('ressources', ()):
             self.ressources_directory[ressource] = node_info['node_id']
 
+    def on_message(self, collection, *args, **kwargs):
+        collection = self.ressources[collection]
+        return collection.on_message(*args, **kwargs)
+
     @gen.engine
     def process_query(self, collection, action, args={}, ressource_id=None,
             callback=None):
@@ -157,18 +161,15 @@ class RessourceService(BaseService):
         self.logger.info("Call %s with %s" % (collection, kwargs))
         return self.medium.call(collection, **kwargs)
 
-    def publish(self, etype, event):
-        self.medium.publish(etype, event)
-
-    def _register_info(self):
-        return {'name': self.name, 'ressources': self.ressources}
-
-
 
 class RessourceCollection(object):
 
     ressource_name = None
     ressource_class = None
+    service = None
+
+    def on_message(self, **kwargs):
+        pass
 
     @maybe_asynchronous
     def create(self, ressource_id, ressource_data=None, **kwargs):

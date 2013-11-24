@@ -7,7 +7,7 @@ import logging
 from mock import Mock, create_autospec
 
 from zeroservices.exceptions import ServiceUnavailable
-from zeroservices.service import RessourceCollection
+from zeroservices.ressources import RessourceCollection
 
 
 class TestMedium(object):

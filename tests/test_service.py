@@ -1,8 +1,9 @@
 import unittest
 
-from zeroservices import BaseService, RessourceService
+from zeroservices import BaseService, RessourceService, RessourceCollection
+from zeroservices.ressources import NoActionHandler
 from utils import TestMedium, sample_collection
-from mock import call, Mock
+from mock import call, Mock, patch
 
 
 class BaseServiceTestCase(unittest.TestCase):
@@ -119,29 +120,82 @@ class RessourceServiceTestCase(unittest.TestCase):
         self.service.register_ressource(self.collection)
 
     def test_ressource_query(self):
-        message_args = {'kwarg_1': 1, 'kwarg_2': 2}
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2, 'action': 'Foo'}
         message = {'collection': self.ressource_name}
         message.update(message_args)
 
         response = {'response': 'Foo'}
         self.collection.on_message.return_value = response
 
-        self.assertEqual(self.service.on_message(**message), response)
+        self.assertEqual(self.service.on_message(**message),
+                         {'success': True, 'data': response})
 
         self.assertEqual(self.collection.on_message.call_count, 1)
         self.assertEqual(self.collection.on_message.call_args, call(**message_args))
 
+    def test_ressource_query_no_matching_collection(self):
+        ressource_name = 'OtherRessource'
 
-# class ServiceCollectionTestCase(unittest.TestCase):
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2}
+        message = {'collection': ressource_name}
+        message.update(message_args)
 
-#     def setUp(self):
-#         super(ServiceCollectionTestCase, self).__init__()
-#         self.service = sample_service()()
-#         self.collection = sample_collection()()
-#         self.ressource_name = 'Test'
-#         self.collection.ressource_name = self.ressource_name
+        self.assertNotEquals(ressource_name, self.ressource_name)
 
-#         self.service.register(self.collection)
+        response = {'response': 'Foo'}
+        self.collection.on_message.return_value = response
+
+        result = self.service.on_message(**message)
+
+        self.assertEqual(self.collection.on_message.call_count, 0)
+
+        self.assertEqual(result['success'], False)
+        self.assertTrue(ressource_name in result['message'])
+
+    def test_ressource_query_exception(self):
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2, 'action': 'Bar'}
+        message = {'collection': self.ressource_name}
+        message.update(message_args)
+
+        error_message = 'OUPS'
+        self.collection.on_message.side_effect = Exception(error_message)
+
+        self.assertEqual(self.service.on_message(**message),
+                         {'success': False, 'data': error_message})
+
+        self.assertEqual(self.collection.on_message.call_count, 1)
+
+
+class RessourceCollectionTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.ressource_name = 'Test'
+        self.collection = RessourceCollection()
+        self.collection.ressource_name = self.ressource_name
+
+    def test_process_message(self):
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2}
+        query = {'action': 'list'}
+        query.update(message_args)
+
+        with patch.object(self.collection, 'list') as mock:
+            return_value = [42]
+            mock.return_value = return_value
+
+            self.assertEqual(self.collection.on_message(**query),
+                             return_value)
+
+        self.assertEqual(mock.call_count, 1)
+        self.assertEqual(mock.call_args, call(**message_args))
+
+    def test_process_message_no_handler(self):
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2}
+        query = {'action': 'unknown'}
+        query.update(message_args)
+
+        with self.assertRaises(NoActionHandler):
+            self.collection.on_message(**query)
+
 
 #     def test_list(self):
 #         self.collection.list.return_value = [42]

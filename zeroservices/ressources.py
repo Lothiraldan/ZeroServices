@@ -94,6 +94,10 @@ class Ressource(object):
         pass
 
     @abstractmethod
+    def create(self, ressource_data):
+        return self
+
+    @abstractmethod
     def update(self, patch):
         pass
 

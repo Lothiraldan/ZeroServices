@@ -7,7 +7,7 @@ import logging
 from mock import Mock, create_autospec
 
 from zeroservices.exceptions import ServiceUnavailable
-from zeroservices.ressources import RessourceCollection
+from zeroservices.ressources import RessourceCollection, Ressource
 
 
 class TestMedium(object):
@@ -30,6 +30,10 @@ def sample_collection(sample_ressource_name):
     collection.ressource_name = sample_ressource_name
 
     return collection
+
+
+def sample_ressource():
+    return create_autospec(Ressource, True)
 
 
 def gen_service(base_service, save_entries=None):

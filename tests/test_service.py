@@ -2,8 +2,8 @@ import unittest
 
 from zeroservices import BaseService, RessourceService, RessourceCollection
 from zeroservices.ressources import NoActionHandler
-from utils import TestMedium, sample_collection
-from mock import call, Mock, patch
+from utils import TestMedium, sample_collection, sample_ressource
+from mock import call, Mock, patch, sentinel
 
 
 class BaseServiceTestCase(unittest.TestCase):
@@ -170,8 +170,15 @@ class RessourceCollectionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.ressource_name = 'Test'
+
+        self.service = sentinel.service
+
         self.collection = RessourceCollection()
         self.collection.ressource_name = self.ressource_name
+        self.collection.service = self.service
+
+        self.ressource_class = sample_ressource()
+        self.collection.ressource_class = self.ressource_class
 
     def test_process_message(self):
         message_args = {'kwarg_1': 1, 'kwarg_2': 2}
@@ -196,6 +203,24 @@ class RessourceCollectionTestCase(unittest.TestCase):
         with self.assertRaises(NoActionHandler):
             self.collection.on_message(**query)
 
+    def test_process_message_create(self):
+        ressource_id = 'UUID1'
+        message_args = {'ressource_data': {'kwarg_1': 1, 'kwarg_2': 2},
+                        'ressource_id': ressource_id}
+        query = {'action': 'create'}
+        query.update(message_args)
+
+        result = self.collection.on_message(**query)
+        ressource = result._mock_new_parent._mock_new_parent
+
+        self.ressource_class.assert_called_once_with(
+            ressource_collection=self.collection,
+            ressource_id=ressource_id, service=self.service)
+
+        ressource.create.assert_called_once_with(
+            message_args['ressource_data'])
+
+        ressource.get.assert_called_once_with()
 
 #     def test_list(self):
 #         self.collection.list.return_value = [42]

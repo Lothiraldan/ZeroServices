@@ -177,7 +177,7 @@ class RessourceCollectionTestCase(unittest.TestCase):
         self.collection.ressource_name = self.ressource_name
         self.collection.service = self.service
 
-        self.ressource_class = sample_ressource()
+        self.ressource_class, self.ressource_instance = sample_ressource()
         self.collection.ressource_class = self.ressource_class
 
     def test_process_message(self):
@@ -211,16 +211,15 @@ class RessourceCollectionTestCase(unittest.TestCase):
         query.update(message_args)
 
         result = self.collection.on_message(**query)
-        ressource = result._mock_new_parent._mock_new_parent
 
         self.ressource_class.assert_called_once_with(
             ressource_collection=self.collection,
             ressource_id=ressource_id, service=self.service)
 
-        ressource.create.assert_called_once_with(
+        self.ressource_instance.create.assert_called_once_with(
             message_args['ressource_data'])
 
-        ressource.get.assert_called_once_with()
+        self.ressource_instance.get.assert_called_once_with()
 
 #     def test_list(self):
 #         self.collection.list.return_value = [42]

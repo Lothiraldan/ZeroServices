@@ -33,7 +33,10 @@ def sample_collection(sample_ressource_name):
 
 
 def sample_ressource():
-    return create_autospec(Ressource, True)
+    ressource_class = create_autospec(Ressource, True)
+    ressource_instance = create_autospec(Ressource, True, instance=True)
+    ressource_class.return_value = ressource_instance
+    return ressource_class, ressource_instance
 
 
 def gen_service(base_service, save_entries=None):

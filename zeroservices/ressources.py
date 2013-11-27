@@ -50,31 +50,21 @@ class RessourceCollection(object):
     ressource_class = None
     service = None
 
-    def on_message(self, action, **kwargs):
-        action_handler = getattr(self, action, None)
+    def on_message(self, action, ressource_id=None, **kwargs):
+        if ressource_id:
+            ressource = self.instantiate(ressource_id=ressource_id)
+            action_handler = getattr(ressource, action, None)
+        else:
+            action_handler = getattr(self, action, None)
+
         if action_handler:
             return action_handler(**kwargs)
         else:
             raise NoActionHandler('No handler for action %s' % action)
 
-    def create(self, ressource_id, ressource_data=None, **kwargs):
-        if kwargs:
-            raise Exception(kwargs)
-
-        if ressource_data is None:
-            ressource_data = {}
-
-        if self.ressource_class:
-            ressource = self.instantiate(ressource_id=ressource_id)
-            ressource.create(ressource_data)
-            return ressource.get()
-
     def instantiate(self, **kwargs):
         return self.ressource_class(service=self.service,
             ressource_collection=self, **kwargs)
-
-    def get(self, ressource_id):
-        return self.instantiate(ressource_id=ressource_id)
 
     def list(self, where=None):
         pass

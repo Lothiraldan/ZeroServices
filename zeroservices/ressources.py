@@ -1,6 +1,15 @@
 from .service import BaseService
 from abc import ABCMeta, abstractmethod
 
+
+### Utils
+
+
+def is_callable(method):
+    method.is_callable = True
+    return method
+
+
 class RessourceService(BaseService):
 
     def __init__(self, name, medium):
@@ -57,7 +66,7 @@ class RessourceCollection(object):
         else:
             action_handler = getattr(self, action, None)
 
-        if action_handler:
+        if action_handler and getattr(action_handler, 'is_callable', False):
             return action_handler(**kwargs)
         else:
             raise NoActionHandler('No handler for action %s' % action)
@@ -66,6 +75,7 @@ class RessourceCollection(object):
         return self.ressource_class(service=self.service,
             ressource_collection=self, **kwargs)
 
+    @is_callable
     def list(self, where=None):
         pass
 
@@ -80,22 +90,27 @@ class Ressource(object):
         self.ressource_collection = ressource_collection
 
     @abstractmethod
+    @is_callable
     def get(self):
         pass
 
     @abstractmethod
+    @is_callable
     def create(self, ressource_data):
         return self
 
     @abstractmethod
+    @is_callable
     def update(self, patch):
         pass
 
     @abstractmethod
+    @is_callable
     def delete(self):
         pass
 
     @abstractmethod
+    @is_callable
     def add_link(self, relation, target_id, title):
         pass
 

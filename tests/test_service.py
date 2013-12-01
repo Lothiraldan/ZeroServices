@@ -1,7 +1,7 @@
 import unittest
 
 from zeroservices import BaseService, RessourceService, RessourceCollection
-from zeroservices.ressources import NoActionHandler
+from zeroservices.ressources import NoActionHandler, is_callable
 from utils import TestMedium, sample_collection, sample_ressource
 from mock import call, Mock, patch, sentinel
 
@@ -194,6 +194,35 @@ class RessourceCollectionTestCase(unittest.TestCase):
 
         self.assertEqual(mock.call_count, 1)
         self.assertEqual(mock.call_args, call(**message_args))
+
+    def test_process_message_bad_action(self):
+        return_value = 42
+
+        class CustomCollection(RessourceCollection):
+
+            @is_callable
+            def test(self):
+                return return_value
+
+        action_name = "test"
+        query = {'action': action_name}
+
+        collection = CustomCollection()
+        self.assertEqual(collection.on_message(**query), return_value)
+
+    def test_process_message_custom_action(self):
+        class CustomCollection(RessourceCollection):
+
+            def test(self):
+                pass
+
+        action_name = "test"
+        query = {'action': action_name}
+
+        collection = CustomCollection()
+
+        with self.assertRaises(NoActionHandler):
+            collection.on_message(**query)
 
     def test_process_message_no_handler(self):
         message_args = {'kwarg_1': 1, 'kwarg_2': 2}

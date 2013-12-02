@@ -2,7 +2,7 @@ import unittest
 
 from zeroservices import RessourceService, RessourceCollection
 from zeroservices.ressources import NoActionHandler, is_callable
-from utils import TestMedium, sample_collection, sample_ressource
+from utils import test_medium, sample_collection, sample_ressource
 from mock import call, Mock, patch, sentinel
 
 
@@ -10,7 +10,7 @@ class RessourceServiceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.name = "TestService"
-        self.medium = TestMedium()
+        self.medium = test_medium()
         self.service = RessourceService(self.name, self.medium)
 
     def test_service_info(self):
@@ -54,7 +54,7 @@ class RessourceServiceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.name = "TestService"
-        self.medium = TestMedium()
+        self.medium = test_medium()
         self.service = RessourceService(self.name, self.medium)
 
         self.ressource_name = 'TestCollection'

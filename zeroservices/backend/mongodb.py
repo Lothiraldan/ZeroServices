@@ -1,8 +1,8 @@
 import sys
 import pymongo
 
-from smartforge.service import RessourceCollection, Ressource
-from smartforge.utils import maybe_asynchronous
+from zeroservices import RessourceCollection, Ressource
+from zeroservices.ressources import is_callable
 
 class MongoDBRessource(Ressource):
 
@@ -11,36 +11,32 @@ class MongoDBRessource(Ressource):
         self.collection = collection
         self._document = None
 
-    @property
     def document(self):
         if self._document is None:
             self._document = self.collection.find({'_id': self.ressource_id})
         return self._document
 
-    @maybe_asynchronous
-    def create(self, document):
+    @is_callable
+    def create(self, ressource_data):
         self.document_data = {'_id': self.ressource_id}
-        self.document_data.update(document)
+        self.document_data.update(ressource_data)
         self.collection.insert(self.document_data)
 
         self.service.medium.publish(self.ressource_collection.ressource_name,
-            {'type': 'new', '_id': self.ressource_id, 'document': document})
+            {'type': 'new', '_id': self.ressource_id,
+             'ressource_data': ressource_data})
 
-        return {'_id': self.ressource_id}
+        return {'ressource_id': self.ressource_id}
 
-    @maybe_asynchronous
     def get(self):
         return self.document
 
-    @maybe_asynchronous
     def update(self, patch):
         pass
 
-    @maybe_asynchronous
     def delete(self):
         pass
 
-    @maybe_asynchronous
     def add_link(self, relation, target_id, title):
         self.get()
         links = self.document.setdefault("_links", {})
@@ -71,7 +67,6 @@ class MongoDBCollection(RessourceCollection):
         return super(MongoDBCollection, self).instantiate(
             collection=self.collection, **kwargs)
 
-    @maybe_asynchronous
     def list(self, where=None):
         if where is None:
             where = {}

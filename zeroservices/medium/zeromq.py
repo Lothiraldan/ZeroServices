@@ -82,6 +82,8 @@ class ZeroMQMedium(object):
     MCAST_ADDR = "237.252.249.227"
     MCAST_PORT = 32000
 
+    node_id = None
+
     def __init__(self, service, port_random=False, ioloop=None, node_id=None):
         self.service = service
 

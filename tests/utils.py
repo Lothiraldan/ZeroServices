@@ -8,15 +8,11 @@ from mock import Mock, create_autospec
 
 from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.ressources import RessourceCollection, Ressource
+from zeroservices.medium.zeromq import ZeroMQMedium
 
 
-class TestMedium(object):
-
-    def __init__(self):
-        self.node_id = None
-        self.send_registration_answer = Mock()
-        self.send = Mock()
-        self.connect_to_node = Mock()
+def test_medium():
+    return Mock(spec_set=ZeroMQMedium)
 
 
 class ServiceRegistry(object):

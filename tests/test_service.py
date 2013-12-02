@@ -1,7 +1,7 @@
 import unittest
 
 from zeroservices import BaseService
-from utils import TestMedium
+from utils import test_medium
 from mock import call, Mock
 
 
@@ -9,7 +9,7 @@ class BaseServiceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.name = "TestService"
-        self.medium = TestMedium()
+        self.medium = test_medium()
         self.service = BaseService(self.name, self.medium)
 
     def test_service_info(self):

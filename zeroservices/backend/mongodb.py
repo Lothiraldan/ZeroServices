@@ -11,11 +11,6 @@ class MongoDBRessource(Ressource):
         self.collection = collection
         self._document = None
 
-    def document(self):
-        if self._document is None:
-            self._document = self.collection.find({'_id': self.ressource_id})
-        return self._document
-
     @is_callable
     def create(self, ressource_data):
         self.document_data = {'_id': self.ressource_id}

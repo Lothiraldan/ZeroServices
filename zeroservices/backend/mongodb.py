@@ -28,8 +28,11 @@ class MongoDBRessource(Ressource):
 
         return {'ressource_id': self.ressource_id}
 
+    @is_callable
     def get(self):
-        return self.document
+        document = self.document
+        return {'ressource_id': document.pop('_id'),
+                'ressource_data': document}
 
     def update(self, patch):
         pass

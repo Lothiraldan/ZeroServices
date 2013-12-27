@@ -101,7 +101,7 @@ class Ressource(object):
 
     @abstractmethod
     @is_callable
-    def update(self, patch):
+    def patch(self, patch):
         pass
 
     @abstractmethod

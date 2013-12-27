@@ -193,14 +193,14 @@ class RessourceCollectionTestCase(unittest.TestCase):
         del message_args['ressource_id']
         self.ressource_instance.create.assert_called_once_with(**message_args)
 
-    def test_process_message_update(self):
+    def test_process_message_patch(self):
         ressource_id = 'UUID1'
         message_args = {'patch': {'kwarg_1': 1, 'kwarg_2': 2},
                         'ressource_id': ressource_id}
-        query = {'action': 'update'}
+        query = {'action': 'patch'}
         query.update(message_args)
 
-        self.ressource_instance.update.return_value = sentinel.ressource
+        self.ressource_instance.patch.return_value = sentinel.ressource
 
         self.assertEqual(self.collection.on_message(**query),
                          sentinel.ressource)
@@ -210,7 +210,7 @@ class RessourceCollectionTestCase(unittest.TestCase):
             ressource_id=ressource_id, service=self.service)
 
         del message_args['ressource_id']
-        self.ressource_instance.update.assert_called_once_with(**message_args)
+        self.ressource_instance.patch.assert_called_once_with(**message_args)
 
 
     def test_process_message_delete(self):

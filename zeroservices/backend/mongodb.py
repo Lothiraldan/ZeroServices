@@ -29,8 +29,11 @@ class MongoDBRessource(Ressource):
         return {'ressource_id': document.pop('_id'),
                 'ressource_data': document}
 
-    def update(self, patch):
-        pass
+    @is_callable
+    def patch(self, patch):
+        new_document = self.collection.find_and_modify({'_id': self.ressource_id},
+            patch, new=True)
+        return new_document
 
     def delete(self):
         pass

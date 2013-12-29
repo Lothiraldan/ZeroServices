@@ -50,7 +50,7 @@ class RessourceServiceTestCase(unittest.TestCase):
         expected = {'name': self.name, 'ressources': [ressource_name]}
         self.assertEqual(self.service.service_info(), expected)
 
-class RessourceServiceTestCase(unittest.TestCase):
+class RessourceCollectionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.name = "TestService"

@@ -26,6 +26,10 @@ class MongoDBRessource(Ressource):
     @is_callable
     def get(self):
         document = self.document
+
+        if not document:
+            return 'NOK'
+
         return {'ressource_id': document.pop('_id'),
                 'ressource_data': document}
 
@@ -35,15 +39,17 @@ class MongoDBRessource(Ressource):
             patch, new=True)
         return new_document
 
+    @is_callable
     def delete(self):
-        pass
+        self.collection.remove({'_id': self.ressource_id})
+        return 'OK'
 
+    @is_callable
     def add_link(self, relation, target_id, title):
-        self.get()
-        links = self.document.setdefault("_links", {})
-        relation_links = links.setdefault(relation, [])
-        relation_links.append({"target_id": target_id, "title": title})
-        self.collection.save(self.document)
+        patch = {"$push": {"_links.%s" % relation:
+                    {"target_id": target_id, "title": title}}}
+        self.collection.find_and_modify({'_id': self.ressource_id}, patch,
+                                        new=True)
 
         self.service.medium.publish(self.ressource_collection.ressource_name,
             {'type': 'new_link', '_id': self.ressource_id,

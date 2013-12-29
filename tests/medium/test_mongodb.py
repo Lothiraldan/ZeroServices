@@ -54,3 +54,38 @@ class MongoDBCollectionTestCase(unittest.TestCase):
 
         self.assertEqual(self.collection.on_message(**message),
             expected_document)
+
+    def test_delete(self):
+        self.test_get()
+
+        message = {'action': 'delete', 'ressource_id': self.ressource_id}
+
+        self.assertEqual(self.collection.on_message(**message),
+                         'OK')
+
+
+        message = {'action': 'get', 'ressource_id': self.ressource_id}
+
+        self.assertEqual(self.collection.on_message(**message),
+                         'NOK')
+
+    def test_add_link(self):
+        self.test_create()
+
+        relation = 'relation_type'
+        target_id = 'target'
+        title = 'title'
+        message = {'action': 'add_link', 'ressource_id': self.ressource_id,
+                   'relation': relation, 'target_id': target_id, 'title': title}
+        self.assertEqual(self.collection.on_message(**message),
+            "OK")
+
+        expected_data = self.ressource_data.copy()
+        expected_data.update({'_links': {relation: [
+                            {"target_id": target_id, "title": title}]}})
+        expected_document = {'ressource_id': self.ressource_id,
+                             'ressource_data': expected_data}
+
+        message = {'action': 'get', 'ressource_id': self.ressource_id}
+        self.assertEqual(self.collection.on_message(**message),
+                         expected_document)

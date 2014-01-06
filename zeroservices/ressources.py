@@ -42,6 +42,13 @@ class RessourceService(BaseService):
         else:
             return {'success': True, 'data': result}
 
+    def send(self, collection, **kwargs):
+        message = kwargs
+        message.update({'collection': collection})
+
+        node_id = self.ressources_directory[collection]
+        super(RessourceService, self).send(node_id, message)
+
     ### Utils
     def register_ressource(self, collection):
         assert isinstance(collection, RessourceCollection)

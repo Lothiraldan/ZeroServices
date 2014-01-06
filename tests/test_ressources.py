@@ -50,6 +50,27 @@ class RessourceServiceTestCase(unittest.TestCase):
         expected = {'name': self.name, 'ressources': [ressource_name]}
         self.assertEqual(self.service.service_info(), expected)
 
+    def test_ressource_call(self):
+        ressource = 'TestRessource'
+        action = 'list'
+        args = {'key': 'value', 'key2': 'value2'}
+        ressource_id = 'UUID1'
+
+        self.service.on_peer_join = Mock()
+        node_info = {'node_id': 'sample', 'name': 'Sample Service',
+                     'ressources': [ressource]}
+
+        self.service.on_registration_message(node_info)
+
+        call_request = {'collection': ressource, 'action': action,
+            'args': args, 'ressource_id': ressource_id}
+
+        self.service.send(**call_request)
+
+        self.assertEqual(self.medium.send.call_count, 1)
+        mock_call = self.medium.send.call_args
+        self.assertEqual(mock_call, call(node_info, call_request))
+
 class RessourceCollectionTestCase(unittest.TestCase):
 
     def setUp(self):

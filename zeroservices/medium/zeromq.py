@@ -83,17 +83,13 @@ class ZeroMQMedium(object):
     MCAST_PORT = 32000
 
     node_id = None
+    service = None
 
-    def __init__(self, service, port_random=False, ioloop=None, node_id=None):
-        self.service = service
+    def __init__(self, port_random=False, ioloop=None, node_id=None):
 
         if ioloop is None:
             ioloop = IOLoop.instance()
         self.ioloop = ioloop
-
-        self.logger = logging.getLogger('%s.%s' % (self.service.name,
-            'medium'))
-        self.logger.setLevel(logging.DEBUG)
 
         # ØMQ Sockets
         self.context = zmq.Context.instance()
@@ -124,8 +120,20 @@ class ZeroMQMedium(object):
         self.ioloop.add_handler(self.udp_socket.fileno(),
                                 self.process_register, IOLoop.READ)
 
+    @property
+    def service(self):
+        return self._service
+
+    @service.setter
+    def service(self, service):
+        self._service = service
+
+        self.logger = logging.getLogger('%s.%s' % (service.name,
+            'medium'))
+        self.logger.setLevel(logging.DEBUG)
+
         self.logger.info('Start %s, listen to %s and publish to %s' %
-            (self.service.name, self.server_port, self.pub_port))
+            (service.name, self.server_port, self.pub_port))
 
     def start(self):
         self.logger.debug('Start ioloop')

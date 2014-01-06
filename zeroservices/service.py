@@ -23,6 +23,7 @@ class BaseService(object):
     def __init__(self, name, medium):
         self.name = name
         self.medium = medium
+        self.medium.service = self
         self.nodes_directory = {}
 
     def service_info(self):

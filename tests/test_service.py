@@ -12,6 +12,11 @@ class BaseServiceTestCase(unittest.TestCase):
         self.medium = test_medium()
         self.service = BaseService(self.name, self.medium)
 
+    def test_instantiation(self):
+        """Test that service pass itself to the medium
+        """
+        self.assertEqual(self.medium.service, self.service)
+
     def test_service_info(self):
         self.assertEqual(self.service.service_info(), {'name': self.name})
 

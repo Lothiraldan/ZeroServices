@@ -74,6 +74,7 @@ class MongoDBCollection(RessourceCollection):
         return super(MongoDBCollection, self).instantiate(
             collection=self.collection, **kwargs)
 
+    @is_callable
     def list(self, where=None):
         if where is None:
             where = {}

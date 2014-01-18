@@ -85,7 +85,7 @@ class RessourceServiceTestCase(unittest.TestCase):
             self.service.send(**call_request)
 
 
-class RessourceCollectionTestCase(unittest.TestCase):
+class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.name = "TestService"

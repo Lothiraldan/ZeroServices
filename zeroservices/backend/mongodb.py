@@ -78,4 +78,8 @@ class MongoDBCollection(RessourceCollection):
     def list(self, where=None):
         if where is None:
             where = {}
-        return list(self.collection.find(where))
+        result = list()
+        for document in self.collection.find(where):
+            result.append({'ressource_id': document.pop('_id'),
+                           'ressource_data': document})
+        return result

@@ -23,6 +23,11 @@ class MongoDBCollectionTestCase(unittest.TestCase):
     def tearDown(self):
         self.collection.collection.drop()
 
+    def _create(self, ressource_data, ressource_id):
+        message = {'action': 'create', 'ressource_id': ressource_id,
+                   'ressource_data': ressource_data}
+        self.collection.on_message(**message)
+
     def test_create(self):
         message = {'action': 'create', 'ressource_id': self.ressource_id,
                    'ressource_data': self.ressource_data}
@@ -89,3 +94,51 @@ class MongoDBCollectionTestCase(unittest.TestCase):
         message = {'action': 'get', 'ressource_id': self.ressource_id}
         self.assertEqual(self.collection.on_message(**message),
                          expected_document)
+
+    def test_list(self):
+        message = {'action': 'list'}
+
+        # Check that list doesn't return anything
+        self.assertEqual(self.collection.on_message(**message),
+                         [])
+
+        # Create a doc
+        self.test_create()
+
+        # Check that list return the document
+        self.assertEqual(self.collection.on_message(**message),
+                         [{'ressource_id': self.ressource_id,
+                          'ressource_data': self.ressource_data}])
+
+    def test_list_filter(self):
+        doc_1 = ({'field1': 1, 'field2': 2}, 'UUID-1')
+        doc_2 = ({'field1': 3, 'field2': 2}, 'UUID-2')
+        doc_3 = ({'field1': 1, 'field2': 4}, 'UUID-3')
+        docs = (doc_1, doc_2, doc_3)
+
+        for doc in docs:
+            self._create(*doc)
+
+        # All docs
+        message = {'action': 'list'}
+        expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in docs]
+        self.assertEqual(self.collection.on_message(**message),
+                         expected)
+
+        # Field1 = 1
+        message = {'action': 'list', 'where': {'field1': 1}}
+        expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in docs if x[0]['field1'] == 1]
+        self.assertEqual(self.collection.on_message(**message),
+                         expected)
+
+        # Field1 = 3
+        message = {'action': 'list', 'where': {'field1': 3}}
+        expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in docs if x[0]['field1'] == 3]
+        self.assertEqual(self.collection.on_message(**message),
+                         expected)
+
+        # Field2 = 2
+        message = {'action': 'list', 'where': {'field2': 2}}
+        expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in docs if x[0]['field2'] == 2]
+        self.assertEqual(self.collection.on_message(**message),
+                         expected)

@@ -142,6 +142,20 @@ class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
 
         self.assertEqual(self.collection.on_message.call_count, 1)
 
+    def test_ressource_send_local_collection(self):
+        message_args = {'kwarg_1': 1, 'kwarg_2': 2, 'action': 'Foo'}
+        message = {'collection': self.ressource_name}
+        message.update(message_args)
+
+        response = {'response': 'Foo'}
+        self.collection.on_message.return_value = response
+
+        self.assertEqual(self.service.send(**message),
+                         {'success': True, 'data': response})
+
+        self.assertEqual(self.collection.on_message.call_count, 1)
+        self.assertEqual(self.collection.on_message.call_args, call(**message_args))
+
 
 class RessourceCollectionTestCase(unittest.TestCase):
 

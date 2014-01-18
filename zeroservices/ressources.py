@@ -53,6 +53,9 @@ class RessourceService(BaseService):
         message = kwargs
         message.update({'collection': collection})
 
+        if collection in self.ressources.keys():
+            return self.on_message(**message)
+
         try:
             node_id = self.ressources_directory[collection]
         except KeyError:

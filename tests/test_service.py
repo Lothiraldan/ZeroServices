@@ -57,12 +57,17 @@ class BaseServiceTestCase(unittest.TestCase):
         self.assertEqual(self.medium.send_registration_answer.call_count, 0)
         self.assertEqual(self.service.on_peer_join.call_count, 0)
 
-    def test_call(self):
+    def test_send(self):
         node_info = {'node_id': 'sample', 'name': 'Sample Service'}
+
+        # Set response on zeromq mock
+        response = {'result': True}
+        self.medium.send.return_value = response
 
         self.service.on_registration_message(node_info)
         message = {'content': 'Coucou'}
-        self.service.send(node_info['node_id'], message)
+        self.assertEquals(self.service.send(node_info['node_id'], message),
+                          response)
 
         self.assertEqual(self.medium.send.call_count, 1)
         mock_call = self.medium.send.call_args

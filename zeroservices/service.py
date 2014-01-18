@@ -59,7 +59,7 @@ class BaseService(object):
         pass
 
     def send(self, node_id, message, **kwargs):
-        self.medium.send(self.nodes_directory[node_id], message, **kwargs)
+        return self.medium.send(self.nodes_directory[node_id], message, **kwargs)
 
     def publish(self, *args):
         self.medium.publish(*args)

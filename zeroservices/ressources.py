@@ -47,7 +47,7 @@ class RessourceService(BaseService):
         message.update({'collection': collection})
 
         node_id = self.ressources_directory[collection]
-        super(RessourceService, self).send(node_id, message)
+        return super(RessourceService, self).send(node_id, message)
 
     ### Utils
     def register_ressource(self, collection):

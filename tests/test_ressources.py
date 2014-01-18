@@ -2,6 +2,7 @@ import unittest
 
 from zeroservices import RessourceService, RessourceCollection
 from zeroservices.ressources import NoActionHandler, is_callable
+from zeroservices.exceptions import UnknownService
 from utils import test_medium, sample_collection, sample_ressource
 from mock import call, Mock, patch, sentinel
 
@@ -50,7 +51,7 @@ class RessourceServiceTestCase(unittest.TestCase):
         expected = {'name': self.name, 'ressources': [ressource_name]}
         self.assertEqual(self.service.service_info(), expected)
 
-    def test_ressource_call(self):
+    def test_ressource_send(self):
         ressource = 'TestRessource'
         action = 'list'
         args = {'key': 'value', 'key2': 'value2'}
@@ -70,6 +71,19 @@ class RessourceServiceTestCase(unittest.TestCase):
         self.assertEqual(self.medium.send.call_count, 1)
         mock_call = self.medium.send.call_args
         self.assertEqual(mock_call, call(node_info, call_request))
+
+    def test_ressource_send_unknown_service(self):
+        ressource = 'TestRessource'
+        action = 'list'
+        args = {'key': 'value', 'key2': 'value2'}
+        ressource_id = 'UUID1'
+
+        call_request = {'collection': ressource, 'action': action,
+            'args': args, 'ressource_id': ressource_id}
+
+        with self.assertRaises(UnknownService):
+            self.service.send(**call_request)
+
 
 class RessourceCollectionTestCase(unittest.TestCase):
 
@@ -136,12 +150,12 @@ class RessourceCollectionTestCase(unittest.TestCase):
 
         self.service = sentinel.service
 
-        self.collection = RessourceCollection()
+        self.ressource_class, self.ressource_instance = sample_ressource()
+
+        self.collection = RessourceCollection(self.ressource_class, 'ressource')
         self.collection.ressource_name = self.ressource_name
         self.collection.service = self.service
 
-        self.ressource_class, self.ressource_instance = sample_ressource()
-        self.collection.ressource_class = self.ressource_class
 
     def test_process_message(self):
         message_args = {'kwarg_1': 1, 'kwarg_2': 2}
@@ -170,7 +184,7 @@ class RessourceCollectionTestCase(unittest.TestCase):
         action_name = "test"
         query = {'action': action_name}
 
-        collection = CustomCollection()
+        collection = CustomCollection(self.ressource_class, 'ressource')
         self.assertEqual(collection.on_message(**query), return_value)
 
     def test_process_message_custom_action(self):
@@ -182,7 +196,7 @@ class RessourceCollectionTestCase(unittest.TestCase):
         action_name = "test"
         query = {'action': action_name}
 
-        collection = CustomCollection()
+        collection = CustomCollection(self.ressource_class, 'ressource')
 
         with self.assertRaises(NoActionHandler):
             collection.on_message(**query)

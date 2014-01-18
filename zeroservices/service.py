@@ -8,6 +8,7 @@ from tornado import gen
 
 from zeroservices.medium.zeromq import ZeroMQMedium
 from zeroservices.utils import maybe_asynchronous
+from zeroservices.exceptions import UnknownNode
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -25,6 +26,8 @@ class BaseService(object):
         self.medium = medium
         self.medium.service = self
         self.nodes_directory = {}
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)
 
     def service_info(self):
         """Subclass to return informations for registration
@@ -59,7 +62,11 @@ class BaseService(object):
         pass
 
     def send(self, node_id, message, **kwargs):
-        return self.medium.send(self.nodes_directory[node_id], message, **kwargs)
+        try:
+            node_info = self.nodes_directory[node_id]
+        except KeyError:
+            raise UnknownNode("Unknown node {0}".format(node_id))
+        return self.medium.send(node_info, message, **kwargs)
 
     def publish(self, *args):
         self.medium.publish(*args)

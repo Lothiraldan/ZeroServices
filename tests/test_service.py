@@ -1,6 +1,7 @@
 import unittest
 
 from zeroservices import BaseService
+from zeroservices.exceptions import UnknownNode
 from utils import test_medium
 from mock import call, Mock
 
@@ -72,3 +73,8 @@ class BaseServiceTestCase(unittest.TestCase):
         self.assertEqual(self.medium.send.call_count, 1)
         mock_call = self.medium.send.call_args
         self.assertEqual(mock_call, call(node_info, message))
+
+    def test_send_unknown_node(self):
+        message = {'content': 'Coucou'}
+        with self.assertRaises(UnknownNode):
+            self.service.send('commit', message)

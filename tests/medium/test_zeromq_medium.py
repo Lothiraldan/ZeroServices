@@ -113,9 +113,15 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
         r_msg = self.service2.on_registration_message.call_args[0][0]
 
+        # Mock sync_get_response
+        return_value = {'success': True}
+        self.service2.medium._sync_get_response = Mock()
+        self.service2.medium._sync_get_response.return_value = return_value
+
         # Send message with default message_type
         message = {'hello': 'world'}
-        self.service2.medium.send(r_msg, message)
+        self.assertEqual(self.service2.medium.send(r_msg, message),
+                         return_value)
 
         self.ioloop.start()
 

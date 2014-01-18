@@ -290,6 +290,12 @@ class ZeroMQMedium(object):
         self.logger.info('Send %s/%s to %s' % (msg_type, json.dumps(message), address))
         request_socket.send_multipart((msg_type, json.dumps(message)))
 
+        if not callback:
+            return self._sync_get_response(request_socket)
+
+    def _sync_get_response(self, socket):
+        return json.loads(socket.recv_multipart()[0])
+
     def close(self):
         self.logger.info('Close medium')
         self.publish('close', self.get_service_info())

@@ -17,7 +17,7 @@ from time import time
 class ChatService(BaseService):
 
     def __init__(self, username):
-        medium = ZeroMQMedium(self, port_random=True)
+        medium = ZeroMQMedium(port_random=True)
         super(ChatService, self).__init__(username, medium)
 
     def on_event(self, message_type, message):

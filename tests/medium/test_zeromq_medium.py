@@ -143,7 +143,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.service2.medium._sync_get_response = Mock()
         self.service2.medium._sync_get_response.return_value = return_value
 
-        # Send message with default message_type
+        # Send message with custom message_type
         message = {'hello': 'world'}
         message_type = "custom_message_type"
         self.assertEqual(self.service2.medium.send(r_msg, message,

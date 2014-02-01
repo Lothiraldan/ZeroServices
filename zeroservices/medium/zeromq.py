@@ -233,7 +233,8 @@ class ZeroMQMedium(object):
         if message_type == 'register':
             self.service.on_registration_message(message)
         else:
-            result = self.service.on_message(**message)
+            result = self.service.on_message(message_type=message_type,
+                                             **message)
             self.server.send_multipart((sender_uuid, json.dumps(result)))
 
     def process_register(self, *args):

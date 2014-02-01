@@ -29,7 +29,10 @@ class RessourceService(BaseService):
         for ressource in node_info.get('ressources', ()):
             self.ressources_directory[ressource] = node_info['node_id']
 
-    def on_message(self, collection, *args, **kwargs):
+    def on_message(self, collection, message_type, *args, **kwargs):
+        '''Ignore message_type for the moment
+        '''
+
         # Get collection
         try:
             collection = self.ressources[collection]

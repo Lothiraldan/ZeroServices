@@ -127,7 +127,35 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
         self.assertEqual(self.service1.on_message.call_count, 1)
         service1_message = self.service1.on_message.call_args
-        self.assertEqual(service1_message, call(**message))
+        default_message_type = "message"
+        self.assertEqual(service1_message,
+            call(message_type=default_message_type, **message))
+
+    def test_direct_message_custom_message_type(self):
+        self.service1.medium.register()
+
+        self.ioloop.start()
+
+        r_msg = self.service2.on_registration_message.call_args[0][0]
+
+        # Mock sync_get_response
+        return_value = {'success': True}
+        self.service2.medium._sync_get_response = Mock()
+        self.service2.medium._sync_get_response.return_value = return_value
+
+        # Send message with default message_type
+        message = {'hello': 'world'}
+        message_type = "custom_message_type"
+        self.assertEqual(self.service2.medium.send(r_msg, message,
+                            msg_type=message_type),
+                         return_value)
+
+        self.ioloop.start()
+
+        self.assertEqual(self.service1.on_message.call_count, 1)
+        service1_message = self.service1.on_message.call_args
+        self.assertEqual(service1_message,
+            call(message_type=message_type, **message))
 
     def test_direct_message_answer(self):
         return_value = {'ping': 'pong'}

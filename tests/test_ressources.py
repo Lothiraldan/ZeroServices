@@ -98,7 +98,7 @@ class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
 
     def test_ressource_query(self):
         message_args = {'kwarg_1': 1, 'kwarg_2': 2, 'action': 'Foo'}
-        message = {'collection': self.ressource_name}
+        message = {'collection': self.ressource_name, 'message_type': 'message'}
         message.update(message_args)
 
         response = {'response': 'Foo'}
@@ -114,7 +114,7 @@ class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
         ressource_name = 'OtherRessource'
 
         message_args = {'kwarg_1': 1, 'kwarg_2': 2}
-        message = {'collection': ressource_name}
+        message = {'collection': ressource_name, 'message_type': 'message'}
         message.update(message_args)
 
         self.assertNotEquals(ressource_name, self.ressource_name)
@@ -131,7 +131,7 @@ class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
 
     def test_ressource_query_exception(self):
         message_args = {'kwarg_1': 1, 'kwarg_2': 2, 'action': 'Bar'}
-        message = {'collection': self.ressource_name}
+        message = {'collection': self.ressource_name, 'message_type': 'message'}
         message.update(message_args)
 
         error_message = 'OUPS'
@@ -144,7 +144,7 @@ class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
 
     def test_ressource_send_local_collection(self):
         message_args = {'kwarg_1': 1, 'kwarg_2': 2, 'action': 'Foo'}
-        message = {'collection': self.ressource_name}
+        message = {'collection': self.ressource_name, 'message_type': 'message'}
         message.update(message_args)
 
         response = {'response': 'Foo'}

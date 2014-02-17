@@ -1,5 +1,5 @@
 from .service import BaseService
-from .exceptions import UnknownService
+from .exceptions import UnknownService, RessourceException
 from abc import ABCMeta, abstractmethod
 
 import logging
@@ -63,7 +63,13 @@ class RessourceService(BaseService):
             node_id = self.ressources_directory[collection]
         except KeyError:
             raise UnknownService("Unknown service {0}".format(collection))
-        return super(RessourceService, self).send(node_id, message)
+
+        result = super(RessourceService, self).send(node_id, message)
+
+        if result['success'] == False:
+            raise RessourceException(result.pop("data"))
+
+        return result.pop("data")
 
     ### Utils
     def register_ressource(self, collection):

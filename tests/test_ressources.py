@@ -2,7 +2,7 @@ import unittest
 
 from zeroservices import RessourceService, RessourceCollection
 from zeroservices.ressources import NoActionHandler, is_callable
-from zeroservices.exceptions import UnknownService
+from zeroservices.exceptions import UnknownService, RessourceException
 from utils import test_medium, sample_collection, sample_ressource
 from mock import call, Mock, patch, sentinel
 
@@ -66,10 +66,48 @@ class RessourceServiceTestCase(unittest.TestCase):
         call_request = {'collection': ressource, 'action': action,
             'args': args, 'ressource_id': ressource_id}
 
-        self.service.send(**call_request)
+        medium_mock_send = self.medium.send
+        response = {'response': 'Foo'}
+        medium_mock_send.return_value = {'success': True, 'data': response}
 
-        self.assertEqual(self.medium.send.call_count, 1)
-        mock_call = self.medium.send.call_args
+        result = self.service.send(**call_request)
+
+        # Test that RessourceService.send return only data, not envelope
+        self.assertEqual(result, response)
+
+        # Check call
+        self.assertEqual(medium_mock_send.call_count, 1)
+        mock_call = medium_mock_send.call_args
+        self.assertEqual(mock_call, call(node_info, call_request))
+
+    def test_ressource_send_exception(self):
+        ressource = 'TestRessource'
+        action = 'list'
+        args = {'key': 'value', 'key2': 'value2'}
+        ressource_id = 'UUID1'
+
+        self.service.on_peer_join = Mock()
+        node_info = {'node_id': 'sample', 'name': 'Sample Service',
+                     'ressources': [ressource]}
+
+        self.service.on_registration_message(node_info)
+
+        call_request = {'collection': ressource, 'action': action,
+            'args': args, 'ressource_id': ressource_id}
+
+        medium_mock_send = self.medium.send
+        response = 'Error message'
+        medium_mock_send.return_value = {'success': False, 'data': response}
+
+        with self.assertRaises(RessourceException) as cm:
+            self.service.send(**call_request)
+
+        # Check exception
+        self.assertEquals(cm.exception.args, (response,))
+
+        # Check call
+        self.assertEqual(medium_mock_send.call_count, 1)
+        mock_call = medium_mock_send.call_args
         self.assertEqual(mock_call, call(node_info, call_request))
 
     def test_ressource_send_unknown_service(self):

@@ -6,3 +6,6 @@ class UnknownNode(Exception):
 
 class UnknownService(Exception):
     pass
+
+class RessourceException(Exception):
+    pass

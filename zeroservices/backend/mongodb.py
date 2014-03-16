@@ -37,6 +37,11 @@ class MongoDBRessource(Ressource):
     def patch(self, patch):
         new_document = self.collection.find_and_modify({'_id': self.ressource_id},
             patch, new=True)
+
+        self.service.medium.publish(self.ressource_collection.ressource_name,
+            {'type': 'update', '_id': self.ressource_id,
+             'patch': patch})
+
         return new_document
 
     @is_callable

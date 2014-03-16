@@ -103,7 +103,7 @@ class RessourceServiceTestCase(unittest.TestCase):
             self.service.send(**call_request)
 
         # Check exception
-        self.assertEquals(cm.exception.args, (response,))
+        self.assertEquals(cm.exception.error_message, response)
 
         # Check call
         self.assertEqual(medium_mock_send.call_count, 1)

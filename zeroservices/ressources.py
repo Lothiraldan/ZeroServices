@@ -46,7 +46,7 @@ class RessourceService(BaseService):
         try:
             result = collection.on_message(*args, **kwargs)
         except Exception as e:
-            self.logger.error("Error: {0}".format(str(e)))
+            self.logger.exception("Error: {0}".format(str(e)))
             return {'success': False, 'data': str(e)}
         else:
             self.logger.debug("Success: {0}".format(result))

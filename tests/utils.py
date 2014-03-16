@@ -35,6 +35,28 @@ def sample_ressource():
     return ressource_class, ressource_instance
 
 
+def base_ressource():
+
+    class BaseRessource(Ressource):
+
+        def add_link(self):
+            pass
+
+        def create(self):
+            pass
+
+        def delete(self):
+            pass
+
+        def get(self):
+            pass
+
+        def patch(self):
+            pass
+
+    return BaseRessource
+
+
 def gen_service(base_service, save_entries=None):
 
     if save_entries is None:

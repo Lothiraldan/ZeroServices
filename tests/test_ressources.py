@@ -1,10 +1,11 @@
 import unittest
 
 from zeroservices import RessourceService, RessourceCollection
-from zeroservices.ressources import NoActionHandler, is_callable
+from zeroservices.ressources import NoActionHandler, is_callable, Ressource
 from zeroservices.exceptions import UnknownService, RessourceException
-from utils import test_medium, sample_collection, sample_ressource
+from utils import test_medium, sample_collection, sample_ressource, base_ressource
 from mock import call, Mock, patch, sentinel
+from copy import deepcopy
 
 
 class RessourceServiceTestCase(unittest.TestCase):
@@ -318,3 +319,51 @@ class RessourceCollectionTestCase(unittest.TestCase):
 
         del message_args['ressource_id']
         self.ressource_instance.delete.assert_called_once_with()
+
+    def test_publish(self):
+        publish_message = {'type': 'new', '_id': 'foo',
+             'ressource_data': 'bar'}
+
+        publish_mock = Mock()
+        self.service.publish = publish_mock
+
+        # Publish
+        self.collection.publish(publish_message)
+
+        # Check that collection added ressource_name to message
+        publish_message = deepcopy(publish_message)
+        publish_message.update({'ressource_name': self.ressource_name})
+
+        self.assertEqual(publish_mock.call_args_list,
+            [call(self.ressource_name, publish_message)])
+
+class RessourceTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.ressource_name = 'Test'
+        self.ressource_id = 'Test#1'
+
+        self.service = sentinel.service
+
+        self.collection = RessourceCollection(base_ressource(), 'ressource')
+        self.collection.ressource_name = self.ressource_name
+        self.collection.service = self.service
+
+    def test_publish(self):
+        publish_message = {'type': 'new', 'ressource_data': 'bar'}
+
+        publish_mock = Mock()
+        self.service.publish = publish_mock
+
+        instance = self.collection.instantiate(ressource_id=self.ressource_id)
+        instance.publish(publish_message)
+
+        # Check that collection added ressource_name to message
+        # And that ressource added ressource_id to message
+        publish_message = deepcopy(publish_message)
+        publish_message.update({'ressource_name': self.ressource_name,
+            'ressource_id': self.ressource_id})
+
+        self.assertEqual(publish_mock.call_args_list,
+            [call(self.ressource_name, publish_message)])
+

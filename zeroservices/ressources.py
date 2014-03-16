@@ -111,9 +111,14 @@ class RessourceCollection(object):
         return self.ressource_class(service=self.service,
             ressource_collection=self, **kwargs)
 
+    def publish(self, message):
+        message.update({'ressource_name': self.ressource_name})
+        self.service.publish(self.ressource_name, message)
+
     @is_callable
     def list(self, where=None):
         pass
+
 
 
 class Ressource(object):
@@ -149,6 +154,10 @@ class Ressource(object):
     @is_callable
     def add_link(self, relation, target_id, title):
         pass
+
+    def publish(self, message):
+        message.update({'ressource_id': self.ressource_id})
+        self.ressource_collection.publish(message)
 
 
 #### Exceptions

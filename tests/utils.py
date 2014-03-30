@@ -4,7 +4,11 @@ import json
 import socket
 import logging
 
-from mock import Mock, create_autospec
+try:
+    from unittest.mock import Mock, create_autospec
+except ImportError:
+    from mock import Mock, create_autospec
+
 
 from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.ressources import RessourceCollection, Ressource

@@ -3,9 +3,14 @@ import unittest
 from zeroservices import RessourceService, RessourceCollection
 from zeroservices.ressources import NoActionHandler, is_callable, Ressource
 from zeroservices.exceptions import UnknownService, RessourceException
-from utils import test_medium, sample_collection, sample_ressource, base_ressource
-from mock import call, Mock, patch, sentinel
+from .utils import test_medium, sample_collection, sample_ressource, base_ressource
 from copy import deepcopy
+
+
+try:
+    from unittest.mock import call, Mock, patch, sentinel
+except ImportError:
+    from mock import call, Mock, patch, sentinel
 
 
 class RessourceServiceTestCase(unittest.TestCase):
@@ -16,8 +21,9 @@ class RessourceServiceTestCase(unittest.TestCase):
         self.service = RessourceService(self.name, self.medium)
 
     def test_service_info(self):
-        self.assertEqual(self.service.service_info(), {'name': self.name,
-                                                       'ressources': []})
+        service_info = self.service.service_info()
+        self.assertEqual(service_info['name'], self.name)
+        self.assertEqual(list(service_info['ressources']), [])
 
     def test_on_join(self):
         ressource = 'TestRessource'
@@ -49,8 +55,9 @@ class RessourceServiceTestCase(unittest.TestCase):
         collection = sample_collection(ressource_name)
 
         self.service.register_ressource(collection)
-        expected = {'name': self.name, 'ressources': [ressource_name]}
-        self.assertEqual(self.service.service_info(), expected)
+        service_info = self.service.service_info()
+        self.assertEqual(service_info['name'], self.name)
+        self.assertEqual(list(service_info['ressources']), [ressource_name])
 
     def test_ressource_send(self):
         ressource = 'TestRessource'

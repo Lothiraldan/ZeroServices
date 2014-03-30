@@ -1,2 +1,4 @@
-pyzmq==13.1.0
-tornado==3.1.1
+pyzmq
+tornado
+pymongo
+mock

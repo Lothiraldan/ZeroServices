@@ -1,4 +1,9 @@
-from mock import Mock, create_autospec
+try:
+    from unittest.mock import Mock, create_autospec
+except ImportError:
+    from mock import Mock, create_autospec
+
+
 from threading import Thread
 
 from zeroservices.medium.zeromq import ZeroMQMedium
@@ -14,7 +19,7 @@ def generate_zeromq_medium(service_info, node_id=None, ioloop=None):
     service.name = service_info['name']
     service.service_info.return_value = service_info
     service.medium = ZeroMQMedium(port_random=True, node_id=node_id,
-                                       ioloop=ioloop)
+                                  ioloop=ioloop)
     service.medium.service = service
 
     def stop_loop(*args, **kwargs):

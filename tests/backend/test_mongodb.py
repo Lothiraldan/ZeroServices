@@ -2,8 +2,12 @@ import unittest
 
 from zeroservices.backend.mongodb import MongoDBCollection
 from zeroservices import BaseService
-from mock import Mock
 from ..utils import test_medium
+
+try:
+    from unittest.mock import Mock
+except ImportError:
+    from mock import Mock
 
 
 class MongoDBCollectionTestCase(unittest.TestCase):

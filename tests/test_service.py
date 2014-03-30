@@ -2,8 +2,12 @@ import unittest
 
 from zeroservices import BaseService
 from zeroservices.exceptions import UnknownNode
-from utils import test_medium
-from mock import call, Mock
+from .utils import test_medium
+
+try:
+    from unittest.mock import Mock, call
+except ImportError:
+    from mock import Mock, call
 
 
 class BaseServiceTestCase(unittest.TestCase):

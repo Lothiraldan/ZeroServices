@@ -1,8 +1,12 @@
 import unittest
 
-from mock import Mock, call
+try:
+    from unittest.mock import Mock, call
+except ImportError:
+    from mock import Mock, call
 
-from utils import MemoryMedium
+
+from .utils import MemoryMedium
 
 class MemoryMediumCommunicationTestCase(unittest.TestCase):
 

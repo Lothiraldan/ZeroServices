@@ -3,21 +3,24 @@ import json
 import time
 import socket
 import unittest
-import threading
 
 from datetime import timedelta
-from time import sleep
-from mock import Mock, call
+from time import sleep, time
+
+try:
+    from unittest.mock import Mock, call
+except ImportError:
+    from mock import Mock, call
 
 from zeroservices.medium.zeromq import ZeroMQMedium
-from utils import generate_zeromq_medium
+from .utils import generate_zeromq_medium
 
 
 class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
 
     def setUp(self):
         from zmq.eventloop.ioloop import IOLoop
-        self.ioloop = IOLoop.instance()
+        self.ioloop = IOLoop()
         self.service1 = generate_zeromq_medium({'name': 'Service 1'}, ioloop=self.ioloop)
         self.service2 = generate_zeromq_medium({'name': 'Service 2'}, ioloop=self.ioloop)
 
@@ -52,10 +55,8 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
                          service1_registration_message['address'])
 
     def test_register_custom_node_id(self):
-        self.service1.medium.close()
-
         # Set node id
-        service = generate_zeromq_medium({'name': 'custom'}, node_id='custom')
+        service = generate_zeromq_medium({'name': 'custom'}, node_id='custom', ioloop=self.ioloop)
         service.medium.register()
 
         # Same ioloop for both services
@@ -184,10 +185,19 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.assertEqual(response, call(return_value))
 
 
-class ZeroMQMediumRegistrationTestCase(ZeroMQMediumRegistrationTestCase):
+class ZeroMQMediumCloseTestCase(unittest.TestCase):
+
+    def setUp(self):
+        from zmq.eventloop.ioloop import IOLoop
+        self.ioloop = IOLoop()
+        self.service1 = generate_zeromq_medium({'name': 'Service 1'}, ioloop=self.ioloop)
+        self.service2 = generate_zeromq_medium({'name': 'Service 2'}, ioloop=self.ioloop)
 
     def tearDown(self):
         self.service2.medium.close()
+
+    def stop_loop(self, *args, **kwargs):
+        self.ioloop.stop()
 
     def test_close(self):
         # Install ioloop onlt on these services

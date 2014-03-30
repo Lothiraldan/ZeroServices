@@ -67,7 +67,7 @@ def stream(context, sock_type, bind, addr=None, subscribe=None,
         if subscribe:
             sock.setsockopt(zmq.SUBSCRIBE, subscribe)
         else:
-            sock.setsockopt(zmq.SUBSCRIBE, '')
+            sock.setsockopt(zmq.SUBSCRIBE, b'')
 
     if random:
         return sock, int(port)
@@ -95,7 +95,7 @@ class ZeroMQMedium(object):
         self.context = zmq.Context.instance()
 
         self.sub = ZMQStream(stream(self.context, zmq.SUB,
-            bind=False))
+            bind=False), self.ioloop)
         self.sub.on_recv(self.process_sub)
 
         # Node id
@@ -106,17 +106,19 @@ class ZeroMQMedium(object):
         if port_random:
             self.server, self.server_port = stream(self.context,
                 zmq.ROUTER, addr='tcp://*', bind=True, random=True)
-            self.server = ZMQStream(self.server)
+            self.server = ZMQStream(self.server, self.ioloop)
             self.server.on_recv(self.process_raw_query)
             # Set node id
-            self.server.socket.setsockopt(zmq.IDENTITY, self.node_id)
+            self.server.socket.setsockopt(zmq.IDENTITY,
+                                          self.node_id.encode('utf-8'))
 
             self.pub, self.pub_port = stream(self.context, zmq.PUB,
                 addr='tcp://*', bind=True, random=True)
-            self.pub = ZMQStream(self.pub)
+            self.pub = ZMQStream(self.pub, self.ioloop)
 
         # UDP Socket
         self.udp_socket = self.create_udp_socket()
+        self.udp_fileno = self.udp_socket.fileno()
         self.ioloop.add_handler(self.udp_socket.fileno(),
                                 self.process_register, IOLoop.READ)
 
@@ -165,7 +167,7 @@ class ZeroMQMedium(object):
             socket_path = 'ipc://%s' % join(path, 'server.sock')
             socket = stream(self.context, zmq.ROUTER, addr=socket_path,
                 bind=True)
-            zmqstream = ZMQStream(socket)
+            zmqstream = ZMQStream(socket, self.ioloop)
 
             if callback:
                 zmqstream.on_recv(callback)
@@ -201,12 +203,12 @@ class ZeroMQMedium(object):
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        sock.sendto(json.dumps(self.get_service_info()),
+        sock.sendto(json.dumps(self.get_service_info()).encode('utf-8'),
                 (self.MCAST_ADDR, self.MCAST_PORT))
 
     def process_sub(self, message):
         self.logger.info('Process raw sub: %s' % message)
-        message_type, data = message[0].split(' ', 1)
+        message_type, data = message[0].decode('utf-8').split(' ', 1)
         data = json.loads(data)
 
         self.logger.info('Process sub, message_type: %s, data: %s' %
@@ -225,7 +227,8 @@ class ZeroMQMedium(object):
     def process_raw_query(self, raw_message):
         self.logger.info('Raw message %s', raw_message)
         sender_uuid, message_type, message = raw_message
-        message = json.loads(message)
+        message = json.loads(message.decode('utf-8'))
+        message_type = message_type.decode('utf-8')
 
         self.logger.info('Process raw query, message_type: %s, message: %s' %
             (message_type, message))
@@ -235,13 +238,13 @@ class ZeroMQMedium(object):
         else:
             result = self.service.on_message(message_type=message_type,
                                              **message)
-            self.server.send_multipart((sender_uuid, json.dumps(result)))
+            self.server.send_multipart((sender_uuid, json.dumps(result).encode('utf-8')))
 
     def process_register(self, *args):
         data, address = self.udp_socket.recvfrom(1024)
         self.logger.info('Process register, data: %s, from %s' %
             (data, address[0]))
-        data = json.loads(data)
+        data = json.loads(data.decode('utf-8'))
         address = (address[0], self.MCAST_PORT)
         data['address'] = address[0]
         self.service.on_registration_message(data)
@@ -260,7 +263,7 @@ class ZeroMQMedium(object):
         info['address'] = s.getsockname()[0]
 
         self.logger.info('Sending my registration info to %s' % data['address'])
-        sock.send_multipart(('register', json.dumps(info)))
+        sock.send_multipart(('register'.encode('utf-8'), json.dumps(info).encode('utf-8')))
         sock.close()
 
     def connect_to_node(self, data):
@@ -272,7 +275,9 @@ class ZeroMQMedium(object):
 
     def publish(self, event_type, event_data):
         self.logger.debug("Publish %s %s" % (event_type, event_data))
-        self.pub.send('%s %s' % (event_type, json.dumps(event_data)))
+        pub_message = '%s %s' % (event_type, json.dumps(event_data))
+        pub_message = pub_message.encode('utf-8')
+        self.pub.send(pub_message)
 
     def send(self, node_info, message, msg_type="message", callback=None):
         address = node_info['address']
@@ -283,27 +288,33 @@ class ZeroMQMedium(object):
 
         if callback:
             def on_recv(message):
-                callback(json.loads(message[0]))
+                callback(json.loads(message[0].decode('utf-8')))
 
-            stream = ZMQStream(request_socket)
+            stream = ZMQStream(request_socket, self.ioloop)
             stream.on_recv(on_recv)
 
         self.logger.info('Send %s/%s to %s' % (msg_type, json.dumps(message), address))
-        request_socket.send_multipart((msg_type, json.dumps(message)))
+        message = (msg_type.encode('utf-8'), json.dumps(message).encode('utf-8'))
+        request_socket.send_multipart(message)
 
         if not callback:
             return self._sync_get_response(request_socket)
 
     def _sync_get_response(self, socket):
-        return json.loads(socket.recv_multipart()[0])
+        return json.loads(socket.recv_multipart()[0].decode('utf-8'))
 
     def close(self):
         self.logger.info('Close medium')
-        self.publish('close', self.get_service_info())
-        self.pub.flush()
+        try:
+            self.publish('close', self.get_service_info())
+            self.pub.flush()
+        except OSError as e:
+            # Log error
+            self.logger.error('Error during leaving announcement')
 
         # Stop receiving data
-        self.ioloop.remove_handler(self.udp_socket.fileno())
+        self.ioloop.remove_handler(self.udp_fileno)
+        self.udp_socket.close()
         self.sub.close()
         self.server.close()
         self.pub.close()

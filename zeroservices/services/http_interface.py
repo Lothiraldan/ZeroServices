@@ -1,4 +1,3 @@
-import smartforge
 import logging
 import json
 import tornado
@@ -6,7 +5,7 @@ import tornado
 from functools import wraps
 from base64 import decodestring
 from tornado import gen
-from tornado import web
+from tornado.web import URLSpec, RequestHandler, Application
 from tornado import websocket
 
 
@@ -44,7 +43,7 @@ def basic_auth(auth):
 
 
 
-def get_app(port, auth_decorator=None, auth_args=(), auth_kwargs={}):
+def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), auth_kwargs={}):
 
     # Default auth decorator
     if auth_decorator is None:
@@ -52,16 +51,14 @@ def get_app(port, auth_decorator=None, auth_args=(), auth_kwargs={}):
 
 
     # Handlers
-    class MainHandler(web.RequestHandler):
+    class MainHandler(RequestHandler):
         def get(self):
             self.write("Hello world from api")
 
 
-    class CollectionHandler(web.RequestHandler):
+    class CollectionHandler(RequestHandler):
 
         @auth_decorator(*auth_args, **auth_kwargs)
-        @web.asynchronous
-        @gen.engine
         def post(self, collection, action):
             args = json.loads(self.request.body)
 
@@ -69,18 +66,16 @@ def get_app(port, auth_decorator=None, auth_args=(), auth_kwargs={}):
                 'args': args}
             logger.info('Payload %s' % payload)
 
-            result = yield gen.Task(interface.call, **payload)
+            result = interface.call(**payload)
             logger.info('Result is %s' % result)
 
             self.write(result[0])
             self.finish()
 
 
-    class RessourceHandler(web.RequestHandler):
+    class RessourceHandler(RequestHandler):
 
         @auth_decorator(*auth_args, **auth_kwargs)
-        @web.asynchronous
-        @gen.engine
         def post(self, collection, ressource_id, action):
             args = json.loads(self.request.body)
 
@@ -88,7 +83,7 @@ def get_app(port, auth_decorator=None, auth_args=(), auth_kwargs={}):
                 'args': args, 'ressource_id': ressource_id}
             logger.info('Payload %s' % payload)
 
-            result = yield gen.Task(interface.call, **payload)
+            result = interface.call(**payload)
             logger.info('Result is %s' % result)
 
             self.write(result[0])
@@ -107,15 +102,16 @@ def get_app(port, auth_decorator=None, auth_args=(), auth_kwargs={}):
 
     # Urls
     urls = [
-        (r"/", MainHandler),
-        (r"/(?P<collection>[^\/]+)/(?P<action>[^\/]+)$", CollectionHandler),
-        (r"/(?P<collection>[^\/]+)/(?P<ressource_id>[^\/]+)/(?P<action>[^\/]+)$",
-            RessourceHandler),
-        (r"/websocket", WebSocketHandler)]
+        URLSpec(r"/", MainHandler, name="main"),
+        URLSpec(r"/(?P<collection>[^\/]+)/(?P<action>[^\/]+)$",
+                CollectionHandler, name="collection"),
+        URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>[^\/]+)/(?P<action>[^\/]+)$",
+                RessourceHandler, name="ressource"),
+        URLSpec(r"/websocket", WebSocketHandler, name="websocket")]
 
     # Application
-    application = web.Application(urls)
+    application = Application(urls)
     application.listen(port)
-    aplications.clients = []
+    application.clients = []
 
     return application

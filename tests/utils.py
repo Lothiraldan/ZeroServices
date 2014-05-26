@@ -11,7 +11,7 @@ except ImportError:
 
 
 from zeroservices.exceptions import ServiceUnavailable
-from zeroservices.ressources import RessourceCollection, Ressource
+from zeroservices.ressources import RessourceCollection, Ressource, RessourceService
 from zeroservices.medium.zeromq import ZeroMQMedium
 
 
@@ -39,6 +39,11 @@ def sample_ressource():
     return ressource_class, ressource_instance
 
 
+def sample_service():
+    service = create_autospec(RessourceService, True, instance=True)
+    return service
+
+
 def base_ressource():
 
     class BaseRessource(Ressource):
@@ -59,56 +64,6 @@ def base_ressource():
             pass
 
     return BaseRessource
-
-
-def gen_service(base_service, save_entries=None):
-
-    if save_entries is None:
-        save_entries = False
-
-    class TestService(base_service):
-
-        def __init__(self):
-            self.queries = []
-            self.events = []
-            self.save_entries = save_entries
-            self.logger = logging.getLogger()
-
-        def main(self):
-            pass
-
-        def stop(self):
-            del ServiceRegistry.SERVICES[self.name]
-            for ressource in self.ressources:
-                del ServiceRegistry.SERVICES_RESSOURCES[ressource]
-
-        def register(self):
-            ServiceRegistry.SERVICES[self.name] = self
-            for ressource in self.ressources:
-                ServiceRegistry.SERVICES_RESSOURCES[ressource] = self
-
-        def call(self, action, **kwargs):
-            service, action = map(str, action.split('.', 1))
-            kwargs = {str(key): value for key, value in kwargs.items()}
-            return ServiceRegistry.SERVICES[service].process_query((action, json.dumps(kwargs)))
-
-        def publish(self, etype, event):
-            raw_event = ('%s %s' % (etype, event),)
-            for service in ServiceRegistry.SERVICES.values():
-                if service != self:
-                    service.process_event(raw_event)
-
-        def process_query(self, query):
-            if self.save_entries:
-                self.queries.append(query)
-            return super(TestService, self).process_query(query)
-
-        def process_event(self, event):
-            if self.save_entries:
-                self.events.append(event)
-            super(TestService, self).process_event(event)
-
-    return TestService()
 
 # Test memory medium
 

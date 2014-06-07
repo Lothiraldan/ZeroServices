@@ -1,6 +1,7 @@
 import logging
 import json
 import tornado
+import logging
 
 from functools import wraps
 from base64 import decodestring
@@ -49,6 +50,7 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
     if auth_decorator is None:
         auth_decorator = basic_auth
 
+    logger = logging.getLogger('api')
 
     # Handlers
     class MainHandler(RequestHandler):
@@ -59,7 +61,9 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
     class CollectionHandler(RequestHandler):
 
         @auth_decorator(*auth_args, **auth_kwargs)
-        def post(self, collection, action):
+        def get(self, collection):
+            self.write(self.request.body)
+            self.finish()
             args = json.loads(self.request.body)
 
             payload = {'collection': collection, 'action': action,
@@ -69,7 +73,21 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
             result = interface.call(**payload)
             logger.info('Result is %s' % result)
 
-            self.write(result[0])
+            self.write(result)
+            self.finish()
+
+        @auth_decorator(*auth_args, **auth_kwargs)
+        def post(self, collection):
+            args = json.loads(self.request.body.decode('utf-8'))
+
+            payload = {'collection': collection, 'action': 'create',
+                'args': args}
+            logger.info('Payload %s' % payload)
+
+            result = service.send(**payload)
+            logger.info('Result is %s' % result)
+
+            self.write(result)
             self.finish()
 
 
@@ -103,7 +121,7 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
     # Urls
     urls = [
         URLSpec(r"/", MainHandler, name="main"),
-        URLSpec(r"/(?P<collection>[^\/]+)/(?P<action>[^\/]+)$",
+        URLSpec(r"/(?P<collection>[^\/]+)/$",
                 CollectionHandler, name="collection"),
         URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>[^\/]+)/(?P<action>[^\/]+)$",
                 RessourceHandler, name="ressource"),

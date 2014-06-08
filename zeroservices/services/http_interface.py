@@ -6,53 +6,101 @@ import logging
 from functools import wraps
 from base64 import decodestring
 from tornado import gen
-from tornado.web import URLSpec, RequestHandler, Application
+from tornado.web import URLSpec, RequestHandler, Application, HTTPError
 from tornado import websocket
 
 
-# Tornado handlers
-def basic_auth(auth):
+class AuthenticationError(HTTPError):
 
-    def decore(f):
-
-        def _request_auth(handler):
-            handler.set_header('WWW-Authenticate', 'Basic realm=tmr')
-            handler.set_status(401)
-            handler.finish()
-            return False
-
-        @wraps(f)
-        def new_f(*args, **kwargs):
-            handler = args[0]
-
-            auth_header = handler.request.headers.get('Authorization')
-            if auth_header is None:
-                return _request_auth(handler)
-            if not auth_header.startswith('Basic '):
-                return _request_auth(handler)
-
-            auth_decoded = decodestring(auth_header[6:])
-            username, password = auth_decoded.split(':', 2)
-
-            if (auth(username, password)):
-                f(*args, **kwargs)
-            else:
-                return _request_auth(handler)
-
-        return new_f
-    return decore
+    def __init__(self, *args, **kwargs):
+        super(AuthenticationError, self).__init__(*args, **kwargs)
+        self.status_code = 401
+        self.headers = [('WWW-Authenticate', 'Basic realm=tmr')]
 
 
+class ForbiddenError(HTTPError):
+    def __init__(self, *args, **kwargs):
+        super(ForbiddenError, self).__init__(*args, **kwargs)
+        self.status_code = 403
 
-def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), auth_kwargs={}):
 
-    # Default auth decorator
-    if auth_decorator is None:
-        auth_decorator = basic_auth
+class BasicAuth(object):
+    """ Implements Basic AUTH logic. Should be subclassed to implement custom
+    authentication checking.
+
+    """
+
+    def __init__(self, handler):
+        self.handler = handler
+
+    def check_auth(self, username, password, resource, method):
+        """ This function is called to check if a username / password
+        combination is valid. Must be overridden with custom logic.
+
+        :param username: username provided with current request.
+        :param password: password provided with current request
+        :param resource: resource being requested.
+        :param method: HTTP method being executed (POST, GET, etc.)
+        """
+        raise NotImplementedError
+
+    def authorized(self, resource, method):
+        """ Validates the the current request is allowed to pass through.
+
+        :param resource: resource being requested.
+        """
+        handler = self.handler
+
+        auth_header = handler.request.headers.get('Authorization')
+        if auth_header is None:
+            raise AuthenticationError()
+        if not auth_header.startswith('Basic '):
+            raise AuthenticationError()
+
+        auth_decoded = decodestring(auth_header[6:])
+        username, password = auth_decoded.split(':', 2)
+
+        if self.check_auth(username, password, ressource, method):
+            return True
+        else:
+            raise ForbiddenError()
+
+
+def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs={}):
 
     logger = logging.getLogger('api')
 
     # Handlers
+
+
+    class BaseHandler(RequestHandler):
+
+        def prepare(self):
+            auth = self.application.auth(self)
+
+            ressource = self.path_kwargs.get("collection")
+            auth.authorized(ressource, self.request.method)
+
+        def write_error(self, status_code, **kwargs):
+            if self.settings.get("serve_traceback") and "exc_info" in kwargs:
+                # in debug mode, try to send a traceback
+                self.set_header('Content-Type', 'text/plain')
+                for line in traceback.format_exception(*kwargs["exc_info"]):
+                    self.write(line)
+                self.finish()
+            else:
+                if exc_info in kwargs:
+                    for header in getattr(kwargs['exc_info'][1], 'headers', []):
+                        self.set_header(*header)
+
+                self.finish("<html><title>%(code)d: %(message)s</title>"
+                            "<body>%(code)d: %(message)s</body></html>" % {
+                                "code": status_code,
+                                "message": self._reason,
+                            })
+
+
+
     class MainHandler(RequestHandler):
         def get(self):
             self.write("Hello world from api")
@@ -83,7 +131,6 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
 
     class CollectionHandler(BaseHandler):
 
-        @auth_decorator(*auth_args, **auth_kwargs)
         def get(self, collection):
             self.write(self._process(collection, 'list', read_body=False))
             self.finish()
@@ -91,24 +138,20 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
 
     class RessourceHandler(BaseHandler):
 
-        @auth_decorator(*auth_args, **auth_kwargs)
         def get(self, collection, ressource_id):
             self.write(self._process(collection, 'get', ressource_id,
                                      read_body=False))
             self.finish()
 
-        @auth_decorator(*auth_args, **auth_kwargs)
         def post(self, collection, ressource_id):
             self.write(self._process(collection, 'create', ressource_id))
             self.finish()
 
-        @auth_decorator(*auth_args, **auth_kwargs)
         def delete(self, collection, ressource_id):
             self.write(self._process(collection, 'delete', ressource_id,
                                      read_body=False))
             self.finish()
 
-        @auth_decorator(*auth_args, **auth_kwargs)
         def patch(self, collection, ressource_id):
             self.write(self._process(collection, 'patch', ressource_id))
             self.finish()
@@ -117,11 +160,11 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
     class WebSocketHandler(websocket.WebSocketHandler):
 
         def open(self):
-            clients.append(self)
+            self.application.clients.append(self)
             self.write_message('Test')
 
         def on_close(self):
-            clients.remove(self)
+            self.application.clients.remove(self)
 
 
     # Urls
@@ -136,6 +179,7 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
     # Application
     application = Application(urls)
     application.listen(port)
+    application.auth = auth
     application.clients = []
 
     return application

@@ -1,6 +1,6 @@
 import json
 
-from zeroservices.services import get_http_interface
+from zeroservices.services import get_http_interface, BasicAuth
 from zeroservices.ressources import RessourceService
 from tornado.testing import AsyncHTTPTestCase
 
@@ -9,10 +9,11 @@ try:
 except ImportError:
     from mock import Mock, call, sentinel, create_autospec
 
-def test_auth(*args, **kwargs):
-    def wrapper(handler):
-        return handler
-    return wrapper
+
+class TestAuth(BasicAuth):
+
+    def authorized(self, ressource, method):
+        return True
 
 
 class HttpInterfaceTestCase(AsyncHTTPTestCase):
@@ -25,7 +26,7 @@ class HttpInterfaceTestCase(AsyncHTTPTestCase):
     def get_app(self):
         port = self.get_http_port()
         self.app = get_http_interface(self.service, port=port,
-            auth_decorator=test_auth)
+            auth=TestAuth)
         return self.app
 
 

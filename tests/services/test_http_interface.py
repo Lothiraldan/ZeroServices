@@ -35,6 +35,18 @@ class HttpInterfaceTestCase(AsyncHTTPTestCase):
         self.assertEqual(result.code, 200)
         self.assertEqual(result.body, b"Hello world from api")
 
+    def test_get_on_collection(self):
+        self.sentinel = "RETURN_VALUE"
+        self.service.send.return_value = self.sentinel
+
+        result = self.fetch(self.app.reverse_url("collection",
+            self.collection_name))
+        self.assertEqual(result.code, 200)
+        self.assertEqual(result.body.decode('utf-8'), self.sentinel)
+
+        self.assertEqual(self.service.send.call_args,
+            call(collection=self.collection_name, action="list", args={}))
+
     def test_post_on_collection(self):
         self.sentinel = "RETURN_VALUE"
         self.service.send.return_value = self.sentinel

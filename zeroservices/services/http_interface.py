@@ -62,15 +62,11 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
 
         @auth_decorator(*auth_args, **auth_kwargs)
         def get(self, collection):
-            self.write(self.request.body)
-            self.finish()
-            args = json.loads(self.request.body)
-
-            payload = {'collection': collection, 'action': action,
-                'args': args}
+            payload = {'collection': collection, 'action': 'list',
+                'args': {}}
             logger.info('Payload %s' % payload)
 
-            result = interface.call(**payload)
+            result = service.send(**payload)
             logger.info('Result is %s' % result)
 
             self.write(result)

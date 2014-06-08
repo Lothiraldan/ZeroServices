@@ -58,49 +58,59 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
             self.write("Hello world from api")
 
 
-    class CollectionHandler(RequestHandler):
+    class BaseHandler(RequestHandler):
+
+        def _process(self, collection, action, ressource_id=None,
+                     read_body=True):
+
+            payload = {'collection': collection, 'action': action}
+
+            if ressource_id:
+                payload['ressource_id'] = ressource_id
+
+            if read_body:
+                payload['args'] = json.loads(self.request.body.decode('utf-8'))
+            else:
+                payload['args'] = {}
+
+            logger.info('Payload %s' % payload)
+
+            result = service.send(**payload)
+            logger.info('Result is %s' % result)
+
+            return result
+
+
+    class CollectionHandler(BaseHandler):
 
         @auth_decorator(*auth_args, **auth_kwargs)
         def get(self, collection):
-            payload = {'collection': collection, 'action': 'list',
-                'args': {}}
-            logger.info('Payload %s' % payload)
-
-            result = service.send(**payload)
-            logger.info('Result is %s' % result)
-
-            self.write(result)
-            self.finish()
-
-        @auth_decorator(*auth_args, **auth_kwargs)
-        def post(self, collection):
-            args = json.loads(self.request.body.decode('utf-8'))
-
-            payload = {'collection': collection, 'action': 'create',
-                'args': args}
-            logger.info('Payload %s' % payload)
-
-            result = service.send(**payload)
-            logger.info('Result is %s' % result)
-
-            self.write(result)
+            self.write(self._process(collection, 'list', read_body=False))
             self.finish()
 
 
-    class RessourceHandler(RequestHandler):
+    class RessourceHandler(BaseHandler):
 
         @auth_decorator(*auth_args, **auth_kwargs)
-        def post(self, collection, ressource_id, action):
-            args = json.loads(self.request.body)
+        def get(self, collection, ressource_id):
+            self.write(self._process(collection, 'get', ressource_id,
+                                     read_body=False))
+            self.finish()
 
-            payload = {'collection': collection, 'action': action,
-                'args': args, 'ressource_id': ressource_id}
-            logger.info('Payload %s' % payload)
+        @auth_decorator(*auth_args, **auth_kwargs)
+        def post(self, collection, ressource_id):
+            self.write(self._process(collection, 'create', ressource_id))
+            self.finish()
 
-            result = interface.call(**payload)
-            logger.info('Result is %s' % result)
+        @auth_decorator(*auth_args, **auth_kwargs)
+        def delete(self, collection, ressource_id):
+            self.write(self._process(collection, 'delete', ressource_id,
+                                     read_body=False))
+            self.finish()
 
-            self.write(result[0])
+        @auth_decorator(*auth_args, **auth_kwargs)
+        def patch(self, collection, ressource_id):
+            self.write(self._process(collection, 'patch', ressource_id))
             self.finish()
 
 
@@ -119,7 +129,7 @@ def get_http_interface(service, port=8888, auth_decorator=None, auth_args=(), au
         URLSpec(r"/", MainHandler, name="main"),
         URLSpec(r"/(?P<collection>[^\/]+)/$",
                 CollectionHandler, name="collection"),
-        URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>[^\/]+)/(?P<action>[^\/]+)$",
+        URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>[^\/]+)/$",
                 RessourceHandler, name="ressource"),
         URLSpec(r"/websocket", WebSocketHandler, name="websocket")]
 

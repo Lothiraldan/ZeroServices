@@ -1,5 +1,6 @@
 import json
 
+from base64 import b64encode
 from zeroservices.services import get_http_interface, BasicAuth
 from zeroservices.ressources import RessourceService
 from tornado.testing import AsyncHTTPTestCase
@@ -12,8 +13,18 @@ except ImportError:
 
 class TestAuth(BasicAuth):
 
-    def authorized(self, ressource, method):
+    def authorized(self, handler, ressource, method):
         return True
+
+
+class TestBasicAuth(BasicAuth):
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def check_auth(self, username, password, resource, method):
+        return username == self.username and password == self.password
 
 
 class HttpInterfaceTestCase(AsyncHTTPTestCase):
@@ -26,8 +37,11 @@ class HttpInterfaceTestCase(AsyncHTTPTestCase):
     def get_app(self):
         port = self.get_http_port()
         self.app = get_http_interface(self.service, port=port,
-            auth=TestAuth)
+            auth=self.get_auth())
         return self.app
+
+    def get_auth(self):
+        return TestAuth()
 
 
 class HttpInterfaceMainTestCase(HttpInterfaceTestCase):
@@ -113,3 +127,94 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="patch", args=self.args,
                  ressource_id=self.ressource_id))
+
+class HttpInterfaceBasicAuthTestCase(HttpInterfaceTestCase):
+
+    def setUp(self):
+        self.username = "username"
+        self.password = "VERYSECURETOKEN"
+        super(HttpInterfaceBasicAuthTestCase, self).setUp()
+
+    def get_auth(self):
+        return TestBasicAuth(self.username, self.password)
+
+    def get_auth_header(self, username, password=''):
+        if password:
+            auth_header = '{0}:{1}'.format(username, password)
+        else:
+            auth_header = username
+        return b64encode(auth_header.encode('utf-8')).decode('utf-8')
+
+    def test_without_header(self):
+        result = self.fetch(self.app.reverse_url("main"))
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_empty_header(self):
+        url = self.app.reverse_url("main")
+        result = self.fetch(url, headers={'Authorization': ''})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_bad_header(self):
+        url = self.app.reverse_url("main")
+        result = self.fetch(url, headers={'Authorization': 'BadHeader'})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_bad_header_value(self):
+        url = self.app.reverse_url("main")
+        result = self.fetch(url, headers={'Authorization': 'Basic NOPE=+/'})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_bad_header_value(self):
+        url = self.app.reverse_url("main")
+        result = self.fetch(url, headers={'Authorization': 'Basic NOPE=+/'})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_bad_header_not_b64(self):
+        url = self.app.reverse_url("main")
+        result = self.fetch(url, headers={'Authorization': 'Basic NOPE'})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_header_missing_password(self):
+        url = self.app.reverse_url("main")
+        auth_header = b64encode(self.username.encode('utf-8')).decode('utf-8')
+        result = self.fetch(url, headers={'Authorization':
+                                          'Basic {0}'.format(auth_header)})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_header_missing_password(self):
+        url = self.app.reverse_url("main")
+        auth_header = self.get_auth_header(self.username)
+        result = self.fetch(url, headers={'Authorization':
+                                          'Basic {0}'.format(auth_header)})
+
+        self.assertEqual(result.code, 401)
+        self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
+
+    def test_header_bad_password(self):
+        url = self.app.reverse_url("main")
+        auth_header = self.get_auth_header(self.username, self.password[:-1])
+        result = self.fetch(url, headers={'Authorization':
+                                          'Basic {0}'.format(auth_header)})
+
+        self.assertEqual(result.code, 403)
+
+    def test_good_header(self):
+        url = self.app.reverse_url("main")
+        auth_header = self.get_auth_header(self.username, self.password)
+        result = self.fetch(url, headers={'Authorization':
+                                          'Basic {0}'.format(auth_header)})
+
+        self.assertEqual(result.code, 200)

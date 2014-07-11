@@ -26,7 +26,6 @@ class ForbiddenError(HTTPError):
 class BasicAuth(object):
     """ Implements Basic AUTH logic. Should be subclassed to implement custom
     authentication checking.
-
     """
 
     def check_auth(self, username, password, resource, method):
@@ -64,7 +63,7 @@ class BasicAuth(object):
             raise ForbiddenError()
 
 
-def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs={}):
+def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs={}, bind=True):
 
     logger = logging.getLogger('api')
 
@@ -171,7 +170,10 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
     # Application
     application = Application(urls)
-    application.listen(port)
+
+    if bind:
+        application.listen(port)
+
     application.auth = auth
     application.clients = []
 

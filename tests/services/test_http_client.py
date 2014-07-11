@@ -12,6 +12,7 @@ class HttpClientTestCase(unittest.TestCase):
         self.base_url = "http://localhost"
         self.collection_name = "collection"
         self.ressource_id = "1"
+        self.ressource_body = {'_id': self.ressource_id, 'key': 'value'}
         self.client = HTTPClient(self.base_url)
         self.app = get_http_interface(sentinel.SERVICE, bind=False)
 
@@ -35,7 +36,7 @@ class HttpClientTestCase(unittest.TestCase):
 
     @responses.activate
     def test_list_on_collection(self):
-        expected_body = [{'_id': '#1', 'key': 'value'}]
+        expected_body = [self.ressource_body]
 
         responses.add(
             responses.GET, self.collection_url,
@@ -47,7 +48,7 @@ class HttpClientTestCase(unittest.TestCase):
 
     @responses.activate
     def test_get_on_ressource(self):
-        expected_body = {'_id': '#1', 'key': 'value'}
+        expected_body = self.ressource_body
 
         responses.add(
             responses.GET, self.ressource_url,
@@ -56,3 +57,19 @@ class HttpClientTestCase(unittest.TestCase):
         response = self.client[self.collection_name][self.ressource_id].get()
 
         self.assertEquals(response, expected_body)
+
+    @responses.activate
+    def test_post_on_ressource(self):
+        expected_body = {'_id': self.ressource_id}
+
+        responses.add(
+            responses.POST, self.ressource_url,
+            body=json.dumps(expected_body), status=200)
+
+        response = self.client[self.collection_name][self.ressource_id].create(**self.ressource_body)
+
+        self.assertEquals(response, expected_body)
+
+        self.assertEquals(len(responses.calls), 1)
+        request_body = responses.calls[0].request.body
+        self.assertEquals(request_body, json.dumps(self.ressource_body))

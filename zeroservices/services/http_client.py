@@ -1,4 +1,5 @@
 import requests
+import json
 
 try:
     from urlparse import urljoin, urlsplit, urlunsplit
@@ -40,12 +41,15 @@ class HTTPClient(object):
 
 class MethodCaller(object):
 
+    method_map = {'list': 'get', 'get': 'get', 'create': 'post'}
+
     def __init__(self, client, action):
         self.client = client
         self.action = action
+        self.method = self.method_map.get(action)
 
-    def __call__(self):
+    def __call__(self, **kwargs):
         url = url_path_join(self.client.base_url, *self.client.parts)
-        response = requests.get(url)
+        response = getattr(requests, self.method)(url, data=json.dumps(kwargs))
         self.client.parts = []
         return response.json()

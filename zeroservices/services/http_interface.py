@@ -166,7 +166,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
                 CollectionHandler, name="collection"),
         URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>[^\/]+)/$",
                 RessourceHandler, name="ressource"),
-        URLSpec(r"/websocket", WebSocketHandler, name="websocket")]
+        URLSpec(r"/websocket/", WebSocketHandler, name="websocket")]
 
     # Application
     application = Application(urls)

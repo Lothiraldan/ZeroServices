@@ -64,7 +64,7 @@ class HttpClientTestCase(unittest.TestCase):
 
         responses.add(
             responses.POST, self.ressource_url,
-            body=json.dumps(expected_body), status=200)
+            body=json.dumps(expected_body), status=201)
 
         response = self.client[self.collection_name][self.ressource_id].create(**self.ressource_body)
 
@@ -73,3 +73,31 @@ class HttpClientTestCase(unittest.TestCase):
         self.assertEquals(len(responses.calls), 1)
         request_body = responses.calls[0].request.body
         self.assertEquals(request_body, json.dumps(self.ressource_body))
+
+    @responses.activate
+    def test_delete_on_ressource(self):
+        expected_response = 'OK'
+
+        responses.add(
+            responses.DELETE, self.ressource_url,
+            body=json.dumps(expected_response), status=200)
+
+        response = self.client[self.collection_name][self.ressource_id].delete()
+
+        self.assertEquals(response, expected_response)
+
+    @responses.activate
+    def test_patch_on_ressource(self):
+        expected_response = {'_id': self.ressource_id, 'key': 'value2'}
+        patch = {"$set": {"key": "value2"}}
+
+        responses.add(
+            responses.PATCH, self.ressource_url,
+            body=json.dumps(expected_response), status=200)
+
+        response = self.client[self.collection_name][self.ressource_id].patch(**patch)
+
+        self.assertEquals(response, expected_response)
+        self.assertEquals(len(responses.calls), 1)
+        request_body = responses.calls[0].request.body
+        self.assertEquals(request_body, json.dumps(patch))

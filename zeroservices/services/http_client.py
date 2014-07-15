@@ -57,6 +57,7 @@ class MethodCaller(object):
         additionnal = self.client.preprocess_request()
         response = getattr(requests, self.method)(url, data=json.dumps(kwargs),
                                                   **additionnal)
+        response.raise_for_status()
         self.client.parts = []
         if self.decode_json:
             return response.json()

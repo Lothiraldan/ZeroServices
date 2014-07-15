@@ -3,6 +3,7 @@ import unittest
 import responses
 from mock import sentinel
 from base64 import b64encode
+from requests.exceptions import HTTPError
 
 from zeroservices.services import BaseHTTPClient, BasicAuthHTTPClient
 from zeroservices.services import get_http_interface, BasicAuth
@@ -102,6 +103,16 @@ class BaseHttpClientTestCase(unittest.TestCase):
         self.assertEquals(len(responses.calls), 1)
         request_body = responses.calls[0].request.body
         self.assertEquals(request_body, json.dumps(patch))
+
+    @responses.activate
+    def test_404(self):
+        responses.add(
+            responses.GET, self.ressource_url,
+            body="", status=404)
+
+        with self.assertRaises(HTTPError):
+            response = self.client[self.collection_name][self.ressource_id].get()
+
 
 class BasicAuthClientTestCase(unittest.TestCase):
 

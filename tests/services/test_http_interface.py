@@ -59,15 +59,15 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
         self.url = self.app.reverse_url("collection", self.collection_name)
 
     def test_get_on_collection(self):
-        self.sentinel = "RETURN_VALUE"
+        self.sentinel = [{'_id': '#1'}]
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url)
         self.assertEqual(result.code, 200)
-        self.assertEqual(result.body.decode('utf-8'), self.sentinel)
+        self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name, action="list", args={}))
+            call(collection=self.collection_name, action="list"))
 
 
 class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
@@ -81,48 +81,52 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
         self.body = json.dumps(self.args)
 
     def test_get_on_ressource(self):
-        self.sentinel = "RETURN_VALUE"
+        self.sentinel = {'_id': self.ressource_id}
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url)
         self.assertEqual(result.code, 200)
-        self.assertEqual(result.body.decode('utf-8'), self.sentinel)
+        self.assertEqual(json.loads(result.body.decode('utf-8')),
+                         self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name, action="get", args={},
+            call(collection=self.collection_name, action="get",
                  ressource_id=self.ressource_id))
 
     def test_post_on_ressource(self):
-        self.sentinel = "RETURN_VALUE"
+        self.sentinel = {'_id': self.ressource_id}
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url, method="POST", body=self.body)
         self.assertEqual(result.code, 200)
-        self.assertEqual(result.body.decode('utf-8'), self.sentinel)
+        self.assertEqual(json.loads(result.body.decode('utf-8')),
+                         self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="create", args=self.args,
                  ressource_id=self.ressource_id))
 
     def test_delete_on_ressource(self):
-        self.sentinel = "RETURN_VALUE"
+        self.sentinel = "OK"
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url, method="DELETE")
         self.assertEqual(result.code, 200)
-        self.assertEqual(result.body.decode('utf-8'), self.sentinel)
+        self.assertEqual(json.loads(result.body.decode('utf-8')),
+                         self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name, action="delete", args={},
+            call(collection=self.collection_name, action="delete",
                  ressource_id=self.ressource_id))
 
     def test_patch_on_ressource(self):
-        self.sentinel = "RETURN_VALUE"
+        self.sentinel = {'_id': '#1'}
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url, method="PATCH", body=self.body)
         self.assertEqual(result.code, 200)
-        self.assertEqual(result.body.decode('utf-8'), self.sentinel)
+        self.assertEqual(json.loads(result.body.decode('utf-8')),
+                         self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="patch", args=self.args,

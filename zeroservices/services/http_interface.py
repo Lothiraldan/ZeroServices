@@ -8,6 +8,7 @@ from functools import wraps
 from base64 import b64decode
 from tornado import gen
 from tornado.web import URLSpec, RequestHandler, Application, HTTPError
+from tornado.options import parse_command_line
 from tornado import websocket
 
 
@@ -86,15 +87,13 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
             if read_body:
                 payload['args'] = json.loads(self.request.body.decode('utf-8'))
-            else:
-                payload['args'] = {}
 
             logger.info('Payload %s' % payload)
 
             result = service.send(**payload)
             logger.info('Result is %s' % result)
 
-            return result
+            return json.dumps(result)
 
         def write_error(self, status_code, **kwargs):
             if self.settings.get("serve_traceback") and "exc_info" in kwargs:
@@ -174,6 +173,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     if bind:
         application.listen(port)
 
+    parse_command_line()
     application.auth = auth
     application.clients = []
 

@@ -74,7 +74,9 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
         self.sentinel = [{'_id': '#1'}]
         self.service.send.return_value = self.sentinel
 
-        result = self.fetch(self.url, headers={'X-CUSTOM-ACTION': 'custom_action'})
+        # Include empty body just for the tests :(
+        result = self.fetch(self.url, method="POST", body='',
+                            headers={'X-CUSTOM-ACTION': 'custom_action'})
         self.assertEqual(result.code, 200)
         self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
@@ -149,12 +151,14 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
         self.sentinel = {'_id': '#1'}
         self.service.send.return_value = self.sentinel
 
-        result = self.fetch(self.url, headers={'X-CUSTOM-ACTION': 'custom_action'})
+        result = self.fetch(self.url, method="POST",
+                            headers={'X-CUSTOM-ACTION': 'custom_action'},
+                            body=self.body)
         self.assertEqual(result.code, 200)
         self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name,
+            call(collection=self.collection_name, args=self.args,
                  ressource_id=self.ressource_id,  action=custom_action))
 
 

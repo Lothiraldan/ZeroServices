@@ -49,6 +49,22 @@ class BaseHttpClientTestCase(unittest.TestCase):
         self.assertEquals(response, expected_body)
 
     @responses.activate
+    def test_custom_action_on_collection(self):
+        expected_body = [self.ressource_body]
+
+        responses.add(
+            responses.POST, self.collection_url,
+            body=json.dumps(expected_body), status=200)
+
+        response = self.client[self.collection_name].custom_action()
+
+        self.assertEquals(response, expected_body)
+        self.assertEquals(len(responses.calls), 1)
+        request_headers = responses.calls[0].request.headers
+        self.assertEquals(request_headers['X-CUSTOM-ACTION'],
+            'custom_action')
+
+    @responses.activate
     def test_get_on_ressource(self):
         expected_body = self.ressource_body
 
@@ -103,6 +119,22 @@ class BaseHttpClientTestCase(unittest.TestCase):
         self.assertEquals(len(responses.calls), 1)
         request_body = responses.calls[0].request.body
         self.assertEquals(request_body, json.dumps(patch))
+
+    @responses.activate
+    def test_custom_action_on_ressource(self):
+        expected_body = {'_id': self.ressource_id}
+
+        responses.add(
+            responses.POST, self.ressource_url,
+            body=json.dumps(expected_body), status=201)
+
+        response = self.client[self.collection_name][self.ressource_id].custom_action()
+
+        self.assertEquals(response, expected_body)
+        self.assertEquals(len(responses.calls), 1)
+        request_headers = responses.calls[0].request.headers
+        self.assertEquals(request_headers['X-CUSTOM-ACTION'],
+            'custom_action')
 
     @responses.activate
     def test_404(self):

@@ -50,11 +50,16 @@ class MethodCaller(object):
         self.client = client
         self.action = action
         self.decode_json = decode_json
-        self.method = self.method_map.get(action, 'get')
+        self.method = self.method_map.get(action)
 
     def __call__(self, **kwargs):
         url = url_path_join(self.client.base_url, *self.client.parts)
         additionnal = self.client.preprocess_request()
+
+        if not self.method:
+            self.method = 'post'
+            additionnal.setdefault('headers', {})['X-CUSTOM-ACTION'] = self.action
+
         response = getattr(requests, self.method)(url, data=json.dumps(kwargs),
                                                   **additionnal)
         response.raise_for_status()

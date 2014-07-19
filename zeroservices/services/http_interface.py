@@ -3,6 +3,7 @@ import json
 import tornado
 import logging
 import binascii
+import traceback
 
 from functools import wraps
 from base64 import b64decode
@@ -20,8 +21,15 @@ class AuthenticationError(HTTPError):
 
 
 class ForbiddenError(HTTPError):
+
     def __init__(self, *args, **kwargs):
         super(ForbiddenError, self).__init__(403, *args, **kwargs)
+
+
+class MethodNotAllowed(HTTPError):
+
+    def __init__(self, *args, **kwargs):
+        super(MethodNotAllowed, self).__init__(405, *args, **kwargs)
 
 
 class BasicAuth(object):
@@ -77,19 +85,17 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
             ressource = self.path_kwargs.get("collection")
             auth.authorized(self, ressource, self.request.method)
 
-        def _process(self, collection, action, ressource_id=None,
-                     read_body=True):
+        def _process(self, collection, action, ressource_id=None):
 
-            custom_action = self.request.headers.get('X-CUSTOM-ACTION')
-
-            payload = {'collection': collection,
-                       'action': custom_action or action}
+            payload = {'collection': collection, 'action': action}
 
             if ressource_id:
                 payload['ressource_id'] = ressource_id
 
-            if read_body:
+            try:
                 payload['args'] = json.loads(self.request.body.decode('utf-8'))
+            except ValueError, UnicodeDecodeError:
+                pass
 
             logger.info('Payload %s' % payload)
 
@@ -127,21 +133,28 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     class CollectionHandler(BaseHandler):
 
         def get(self, collection):
-            self._process(collection, 'list', read_body=False)
+            self._process(collection, 'list')
+
+        def post(self, collection):
+            custom_action = self.request.headers.get('X-CUSTOM-ACTION')
+
+            if not custom_action:
+                raise MethodNotAllowed()
+
+            self._process(collection, custom_action)
 
 
     class RessourceHandler(BaseHandler):
 
         def get(self, collection, ressource_id):
-            self._process(collection, 'get', ressource_id,
-                          read_body=False)
+            self._process(collection, 'get', ressource_id)
 
         def post(self, collection, ressource_id):
-            self._process(collection, 'create', ressource_id)
+            custom_action = self.request.headers.get('X-CUSTOM-ACTION')
+            self._process(collection, custom_action or 'create', ressource_id)
 
         def delete(self, collection, ressource_id):
-            self._process(collection, 'delete', ressource_id,
-                          read_body=False)
+            self._process(collection, 'delete', ressource_id)
 
         def patch(self, collection, ressource_id):
             self._process(collection, 'patch', ressource_id)

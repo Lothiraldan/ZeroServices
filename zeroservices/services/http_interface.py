@@ -80,7 +80,10 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
         def _process(self, collection, action, ressource_id=None,
                      read_body=True):
 
-            payload = {'collection': collection, 'action': action}
+            custom_action = self.request.headers.get('X-CUSTOM-ACTION')
+
+            payload = {'collection': collection,
+                       'action': custom_action or action}
 
             if ressource_id:
                 payload['ressource_id'] = ressource_id

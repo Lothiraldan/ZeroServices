@@ -93,7 +93,8 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
             result = service.send(**payload)
             logger.info('Result is %s' % result)
 
-            return json.dumps(result)
+            self.write(json.dumps(result))
+            self.finish()
 
         def write_error(self, status_code, **kwargs):
             if self.settings.get("serve_traceback") and "exc_info" in kwargs:
@@ -123,29 +124,24 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     class CollectionHandler(BaseHandler):
 
         def get(self, collection):
-            self.write(self._process(collection, 'list', read_body=False))
-            self.finish()
+            self._process(collection, 'list', read_body=False)
 
 
     class RessourceHandler(BaseHandler):
 
         def get(self, collection, ressource_id):
-            self.write(self._process(collection, 'get', ressource_id,
-                                     read_body=False))
-            self.finish()
+            self._process(collection, 'get', ressource_id,
+                          read_body=False)
 
         def post(self, collection, ressource_id):
-            self.write(self._process(collection, 'create', ressource_id))
-            self.finish()
+            self._process(collection, 'create', ressource_id)
 
         def delete(self, collection, ressource_id):
-            self.write(self._process(collection, 'delete', ressource_id,
-                                     read_body=False))
-            self.finish()
+            self._process(collection, 'delete', ressource_id,
+                          read_body=False)
 
         def patch(self, collection, ressource_id):
-            self.write(self._process(collection, 'patch', ressource_id))
-            self.finish()
+            self._process(collection, 'patch', ressource_id)
 
 
     class WebSocketHandler(websocket.WebSocketHandler):

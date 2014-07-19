@@ -117,8 +117,8 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
                          self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name, action="create", args=self.args,
-                 ressource_id=self.ressource_id))
+            call(collection=self.collection_name, action="create",
+                 ressource_id=self.ressource_id, **self.args))
 
     def test_delete_on_ressource(self):
         self.sentinel = "OK"
@@ -143,8 +143,8 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
                          self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name, action="patch", args=self.args,
-                 ressource_id=self.ressource_id))
+            call(collection=self.collection_name, action="patch",
+                 ressource_id=self.ressource_id, **self.args))
 
     def test_custom_action_on_ressource(self):
         custom_action = 'custom_action'
@@ -158,8 +158,9 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
         self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
-            call(collection=self.collection_name, args=self.args,
-                 ressource_id=self.ressource_id,  action=custom_action))
+            call(collection=self.collection_name,
+                 ressource_id=self.ressource_id,  action=custom_action,
+                 **self.args))
 
 
 class HttpInterfaceRessourceIdSlash(HttpInterfaceTestCase):

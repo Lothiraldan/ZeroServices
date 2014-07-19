@@ -87,15 +87,17 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
         def _process(self, collection, action, ressource_id=None):
 
-            payload = {'collection': collection, 'action': action}
+            payload = {}
+
+            try:
+                payload.update(json.loads(self.request.body.decode('utf-8')))
+            except ValueError, UnicodeDecodeError:
+                logger.exception('Bad body')
+
+            payload.update({'collection': collection, 'action': action})
 
             if ressource_id:
                 payload['ressource_id'] = ressource_id
-
-            try:
-                payload['args'] = json.loads(self.request.body.decode('utf-8'))
-            except ValueError, UnicodeDecodeError:
-                pass
 
             logger.info('Payload %s' % payload)
 

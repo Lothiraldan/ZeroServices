@@ -4,6 +4,7 @@ from base64 import b64encode
 from zeroservices.services import get_http_interface, BasicAuth
 from zeroservices.ressources import RessourceService
 from tornado.testing import AsyncHTTPTestCase
+from tornado.websocket import websocket_connect, WebSocketClientConnection
 
 try:
     from unittest.mock import Mock, call, sentinel, create_autospec
@@ -276,3 +277,22 @@ class HttpInterfaceBasicAuthTestCase(HttpInterfaceTestCase):
                                           'Basic {0}'.format(auth_header)})
 
         self.assertEqual(result.code, 200)
+
+
+class HttpInterfaceWebsocketTestCase(HttpInterfaceTestCase):
+
+    def setUp(self):
+        super(HttpInterfaceWebsocketTestCase, self).setUp()
+        self.ressource_id = "feature/test"
+        self.url = self.app.reverse_url("websocket")
+
+    def get_protocol(self):
+        return 'ws'
+
+    def test_get(self):
+
+        client = websocket_connect(self.get_url(self.url), io_loop=self.io_loop,
+                                   callback=self.stop)
+        self.wait()
+
+        self.assertTrue(isinstance(client.result(), WebSocketClientConnection))

@@ -2,3 +2,4 @@ pyzmq
 tornado
 pymongo
 mock
+voluptuous

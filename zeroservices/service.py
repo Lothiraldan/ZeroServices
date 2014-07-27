@@ -5,6 +5,7 @@ import traceback
 
 from copy import copy
 from tornado import gen
+from voluptuous import Schema, MultipleInvalid, Required
 
 from zeroservices.medium.zeromq import ZeroMQMedium
 from zeroservices.utils import maybe_asynchronous
@@ -13,6 +14,11 @@ from zeroservices.exceptions import UnknownNode
 logging.basicConfig(level=logging.DEBUG)
 
 DEFAULT_MEDIUM = ZeroMQMedium
+
+
+REGISTRATION_SCHEMA = Schema({Required('node_type'): str,
+                              Required('node_id'): str,
+                              Required('name'): str}, extra=True)
 
 
 class BaseService(object):
@@ -32,9 +38,19 @@ class BaseService(object):
     def service_info(self):
         """Subclass to return informations for registration
         """
-        return {'name': self.name}
+        return {'name': self.name, 'node_type': 'node'}
 
     def on_registration_message(self, node_info):
+        try:
+            REGISTRATION_SCHEMA(node_info)
+        except MultipleInvalid as e:
+            logging.exception(e)
+            return
+
+        if node_info['node_type'] == 'node':
+            self.on_registration_message_node(node_info)
+
+    def on_registration_message_node(self, node_info):
         if node_info['node_id'] == self.medium.node_id:
             return
 

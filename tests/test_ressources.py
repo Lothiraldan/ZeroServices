@@ -24,13 +24,14 @@ class RessourceServiceTestCase(unittest.TestCase):
         service_info = self.service.service_info()
         self.assertEqual(service_info['name'], self.name)
         self.assertEqual(list(service_info['ressources']), [])
+        self.assertEqual(service_info['node_type'], 'node')
 
     def test_on_join(self):
         ressource = 'TestRessource'
 
         self.service.on_peer_join = Mock()
         node_info = {'node_id': 'sample', 'name': 'Sample Service',
-                     'ressources': [ressource]}
+                     'ressources': [ressource], 'node_type': 'node'}
 
         self.service.on_registration_message(node_info)
         self.assertEqual(self.service.nodes_directory,
@@ -67,7 +68,7 @@ class RessourceServiceTestCase(unittest.TestCase):
 
         self.service.on_peer_join = Mock()
         node_info = {'node_id': 'sample', 'name': 'Sample Service',
-                     'ressources': [ressource]}
+                     'ressources': [ressource], 'node_type': 'node'}
 
         self.service.on_registration_message(node_info)
 
@@ -96,7 +97,7 @@ class RessourceServiceTestCase(unittest.TestCase):
 
         self.service.on_peer_join = Mock()
         node_info = {'node_id': 'sample', 'name': 'Sample Service',
-                     'ressources': [ressource]}
+                     'node_type': 'node', 'ressources': [ressource]}
 
         self.service.on_registration_message(node_info)
 

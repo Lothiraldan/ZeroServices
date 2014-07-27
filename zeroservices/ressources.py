@@ -21,7 +21,8 @@ class RessourceService(BaseService):
         self.ressources_directory = {}
 
     def service_info(self):
-        return {'name': self.name, 'ressources': self.ressources.keys()}
+        return {'name': self.name, 'ressources': self.ressources.keys(),
+                'node_type': 'node'}
 
     def save_new_node_info(self, node_info):
         super(RessourceService, self).save_new_node_info(node_info)

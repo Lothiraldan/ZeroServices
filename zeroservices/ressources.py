@@ -1,6 +1,7 @@
 from .service import BaseService
 from .exceptions import UnknownService, RessourceException
 from abc import ABCMeta, abstractmethod
+from uuid import uuid4
 
 import logging
 
@@ -159,6 +160,32 @@ class Ressource(object):
     def publish(self, message):
         message.update({'ressource_id': self.ressource_id})
         self.ressource_collection.publish(message)
+
+
+class RessourceWorker(BaseService):
+
+    def __init__(self, medium):
+        name = 'worker-{:s}'.format(str(uuid4()))
+        super(RessourceWorker, self).__init__(name, medium)
+        self.rules = {}
+
+    def service_info(self):
+        matchers = {ressource_type: [rule.matcher for rule in rules] for
+            ressource_type, rules in self.rules.items()}
+        return {'name': self.name, 'matchers': matchers,
+                'node_type': 'worker'}
+
+    def register(self, callback, ressource_type, **matcher):
+        rule = Rule(callback, ressource_type, matcher)
+        self.rules.setdefault(ressource_type, []).append(rule)
+
+
+class Rule(object):
+
+    def __init__(self, callback, ressource_type, matcher):
+        self.callback = callback
+        self.ressource_type = ressource_type
+        self.matcher = matcher
 
 
 #### Exceptions

@@ -1,6 +1,6 @@
 import unittest
 
-from zeroservices import RessourceService, RessourceCollection
+from zeroservices import RessourceService, RessourceCollection, RessourceWorker
 from zeroservices.ressources import NoActionHandler, is_callable, Ressource
 from zeroservices.exceptions import UnknownService, RessourceException
 from .utils import test_medium, sample_collection, sample_ressource, base_ressource
@@ -344,6 +344,70 @@ class RessourceCollectionTestCase(unittest.TestCase):
 
         self.assertEqual(publish_mock.call_args_list,
             [call(self.ressource_name, publish_message)])
+
+
+class RessourceWorkerTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.name = "TestService"
+        self.medium = test_medium()
+        self.ressource_name = 'ressource'
+
+        self.service = RessourceService(self.name, self.medium)
+        collection = sample_collection(self.ressource_name)
+        self.service.register_ressource(collection)
+
+    def test_worker_info(self):
+
+        worker = RessourceWorker(self.medium)
+
+        service_info = worker.service_info()
+        self.assertEqual(service_info['node_type'], 'worker')
+        self.assertEqual(service_info['matchers'], {})
+
+    def test_worker_registration(self):
+
+        ressource_name = self.ressource_name
+
+        class WorkerSample(RessourceWorker):
+
+            def __init__(self, *args, **kwargs):
+                super(WorkerSample, self).__init__(*args, **kwargs)
+                self.register(self.sample_action, ressource_name)
+
+            def sample_action(self, ressource):
+                pass
+
+
+        worker = WorkerSample(self.medium)
+
+        service_info = worker.service_info()
+        self.assertEqual(service_info['node_type'], 'worker')
+        self.assertEqual(service_info['matchers'],
+            {self.ressource_name: [{}]})
+
+    def test_worker_registration_matcher(self):
+
+        ressource_name = self.ressource_name
+        matcher = {'key': 'value'}
+
+        class WorkerSample(RessourceWorker):
+
+            def __init__(self, *args, **kwargs):
+                super(WorkerSample, self).__init__(*args, **kwargs)
+                self.register(self.sample_action, ressource_name, **matcher)
+
+            def sample_action(self, ressource):
+                pass
+
+
+        worker = WorkerSample(self.medium)
+
+        service_info = worker.service_info()
+        self.assertEqual(service_info['node_type'], 'worker')
+        self.assertEqual(service_info['matchers'],
+            {self.ressource_name: [matcher]})
+
 
 class RessourceTestCase(unittest.TestCase):
 

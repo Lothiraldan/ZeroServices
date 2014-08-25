@@ -363,7 +363,7 @@ class RessourceWorkerTestCase(unittest.TestCase):
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
-        self.assertEqual(service_info['matchers'], {})
+        self.assertEqual(service_info['ressources'], [])
 
     def test_worker_registration(self):
 
@@ -383,8 +383,8 @@ class RessourceWorkerTestCase(unittest.TestCase):
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
-        self.assertEqual(service_info['matchers'],
-            {self.ressource_name: [{}]})
+        self.assertEqual(service_info['ressources'],
+            [self.ressource_name])
 
     def test_worker_registration_matcher(self):
 
@@ -405,8 +405,8 @@ class RessourceWorkerTestCase(unittest.TestCase):
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
-        self.assertEqual(service_info['matchers'],
-            {self.ressource_name: [matcher]})
+        self.assertEqual(service_info['ressources'],
+            [self.ressource_name])
 
 
 class RessourceTestCase(unittest.TestCase):

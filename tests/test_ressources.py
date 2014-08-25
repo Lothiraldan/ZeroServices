@@ -419,6 +419,14 @@ class RessourceWorkerTestCase(unittest.TestCase):
             call(self.ressource_name))
 
 
+class RessourceWorkerJoinTestCase(unittest.TestCase):
+
+    def test_worker_join_service(self):
+
+        self.name = "TestService"
+        self.service = RessourceService(self.name, self.medium)
+
+
 class RessourceTestCase(unittest.TestCase):
 
     def setUp(self):

@@ -30,7 +30,7 @@ class BaseService(object):
     def __init__(self, name, medium):
         self.name = name
         self.medium = medium
-        self.medium.service = self
+        self.medium.set_service(self)
         self.nodes_directory = {}
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)

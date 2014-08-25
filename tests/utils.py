@@ -12,11 +12,11 @@ except ImportError:
 
 from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.ressources import RessourceCollection, Ressource
-from zeroservices.medium.zeromq import ZeroMQMedium
+from zeroservices.medium import BaseMedium
 
 
 def test_medium():
-    return Mock(spec_set=ZeroMQMedium)
+    return Mock(spec_set=BaseMedium)
 
 
 class ServiceRegistry(object):

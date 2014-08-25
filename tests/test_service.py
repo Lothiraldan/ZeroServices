@@ -22,7 +22,9 @@ class BaseServiceTestCase(unittest.TestCase):
     def test_instantiation(self):
         """Test that service pass itself to the medium
         """
-        self.assertEqual(self.medium.service, self.service)
+        self.assertEqual(self.medium.set_service.call_count, 1)
+        self.assertEqual(self.medium.set_service.call_args,
+                         call(self.service))
 
     def test_service_info(self):
         self.assertEqual(self.service.service_info(),

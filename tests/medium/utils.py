@@ -20,7 +20,7 @@ def generate_zeromq_medium(service_info, node_id=None, ioloop=None):
     service.service_info.return_value = service_info
     service.medium = ZeroMQMedium(port_random=True, node_id=node_id,
                                   ioloop=ioloop)
-    service.medium.service = service
+    service.medium.set_service(service)
 
     def stop_loop(*args, **kwargs):
         service.medium.stop()

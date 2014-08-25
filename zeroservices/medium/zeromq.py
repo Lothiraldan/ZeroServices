@@ -16,6 +16,8 @@ from os.path import join
 from os import makedirs
 from uuid import uuid4
 
+from zeroservices.medium import BaseMedium
+
 logging.basicConfig(level=logging.DEBUG)
 
 # Come from excellent http://stefan.sofa-rockers.org/2012/02/01/designing-and-testing-pyzmq-applications-part-1/
@@ -75,7 +77,7 @@ def stream(context, sock_type, bind, addr=None, subscribe=None,
         return sock
 
 
-class ZeroMQMedium(object):
+class ZeroMQMedium(BaseMedium):
 
     #Multicast registration
     ANY = "0.0.0.0"
@@ -87,6 +89,8 @@ class ZeroMQMedium(object):
 
     def __init__(self, port_random=False, ioloop=None, node_id=None):
 
+        super(ZeroMQMedium, self).__init__(node_id)
+
         if ioloop is None:
             ioloop = IOLoop.instance()
         self.ioloop = ioloop
@@ -97,11 +101,6 @@ class ZeroMQMedium(object):
         self.sub = ZMQStream(stream(self.context, zmq.SUB,
             bind=False), self.ioloop)
         self.sub.on_recv(self.process_sub)
-
-        # Node id
-        if node_id is None:
-            node_id = uuid4().hex
-        self.node_id = node_id
 
         if port_random:
             self.server, self.server_port = stream(self.context,
@@ -122,21 +121,6 @@ class ZeroMQMedium(object):
         self.ioloop.add_handler(self.udp_socket.fileno(),
                                 self.process_register, IOLoop.READ)
 
-    @property
-    def service(self):
-        return self._service
-
-    @service.setter
-    def service(self, service):
-        self._service = service
-
-        self.logger = logging.getLogger('%s.%s' % (service.name,
-            'medium'))
-        self.logger.setLevel(logging.DEBUG)
-
-        self.logger.info('Start %s, listen to %s and publish to %s' %
-            (service.name, self.server_port, self.pub_port))
-
     def start(self):
         self.logger.debug('Start ioloop')
         self.ioloop.start()
@@ -145,14 +129,14 @@ class ZeroMQMedium(object):
         self.logger.debug('Stop ioloop')
         self.ioloop.stop()
 
-    def get_service_info(self):
-        base_service_info = self.service.service_info()
+    def get_node_info(self):
+        node_info = self.service.service_info()
 
-        base_service_info['server_port'] = self.server_port
-        base_service_info['pub_port'] = self.pub_port
-        base_service_info['node_id'] = self.node_id
+        node_info['server_port'] = self.server_port
+        node_info['pub_port'] = self.pub_port
+        node_info['node_id'] = self.node_id
 
-        return base_service_info
+        return node_info
 
     def add_server_entrypoint(self, path=None, port=None, publish=False,
             callback=None):
@@ -203,7 +187,7 @@ class ZeroMQMedium(object):
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        sock.sendto(json.dumps(self.get_service_info()).encode('utf-8'),
+        sock.sendto(json.dumps(self.get_node_info()).encode('utf-8'),
                 (self.MCAST_ADDR, self.MCAST_PORT))
 
     def subscribe(self, topic):
@@ -255,24 +239,21 @@ class ZeroMQMedium(object):
         #     self.register_to(data)
         # self.logger.info('Self ressources map: %s' % self.services_ressources)
 
-    def send_registration_answer(self, data):
-        sock = self.context.socket(zmq.DEALER)
-        sock.connect('tcp://%s:%s' % (data['address'], data['server_port']))
-        info = self.get_service_info()
+    def send_registration_answer(self, peer_info):
+        node_info = self.get_node_info()
 
         # Find my local address
         s = socket.socket(AF_INET, SOCK_STREAM)
-        s.connect((data['address'], data['server_port']))
-        info['address'] = s.getsockname()[0]
+        s.connect((peer_info['address'], peer_info['server_port']))
+        node_info['address'] = s.getsockname()[0]
 
-        self.logger.info('Sending my registration info to %s' % data['address'])
-        sock.send_multipart(('register'.encode('utf-8'), json.dumps(info).encode('utf-8')))
-        sock.close()
+        super(ZeroMQMedium, self).send_registration_answer(peer_info, node_info)
 
-    def connect_to_node(self, data):
-        self.logger.debug('Connecting my sub socket to tcp://%s:%s' %
-            (data['address'], data['pub_port']))
-        self.sub.connect('tcp://%s:%s' % (data['address'], data['pub_port']))
+    def connect_to_node(self, peer_info):
+        peer_address = 'tcp://%s:%s' % (peer_info['address'],
+                                        peer_info['pub_port'])
+        self.logger.debug('Connecting my sub socket to %s' % peer_address)
+        self.sub.connect(peer_address)
         # Wait for subscribing process to be completed
         time.sleep(0.01)
 
@@ -282,14 +263,15 @@ class ZeroMQMedium(object):
         pub_message = pub_message.encode('utf-8')
         self.pub.send(pub_message)
 
-    def send(self, node_info, message, msg_type="message", callback=None):
-        address = node_info['address']
-        port = node_info['server_port']
+    def send(self, peer_info, message, msg_type="message", callback=None,
+             wait_response=True):
+        address = peer_info['address']
+        port = peer_info['server_port']
         request_socket = self.context.socket(zmq.DEALER)
         address = 'tcp://%(address)s:%(port)s' % locals()
         request_socket.connect(address)
 
-        if callback:
+        if callback and wait_response:
             def on_recv(message):
                 callback(json.loads(message[0].decode('utf-8')))
 
@@ -300,6 +282,10 @@ class ZeroMQMedium(object):
         message = (msg_type.encode('utf-8'), json.dumps(message).encode('utf-8'))
         request_socket.send_multipart(message)
 
+        if not wait_response:
+            request_socket.close()
+            return
+
         if not callback:
             return self._sync_get_response(request_socket)
 
@@ -309,7 +295,7 @@ class ZeroMQMedium(object):
     def close(self):
         self.logger.info('Close medium')
         try:
-            self.publish('close', self.get_service_info())
+            self.publish('close', self.get_node_info())
             self.pub.flush()
         except OSError as e:
             # Log error

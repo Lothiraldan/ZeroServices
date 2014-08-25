@@ -170,8 +170,6 @@ class RessourceWorker(BaseService):
         self.rules = {}
 
     def service_info(self):
-        matchers = {ressource_type: [rule.matcher for rule in rules] for
-            ressource_type, rules in self.rules.items()}
         return {'name': self.name, 'ressources': self.rules.keys(),
                 'node_type': 'worker'}
 

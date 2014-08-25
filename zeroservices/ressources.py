@@ -179,6 +179,9 @@ class RessourceWorker(BaseService):
         rule = Rule(callback, ressource_type, matcher)
         self.rules.setdefault(ressource_type, []).append(rule)
 
+        # Register to events matching ressource_type
+        self.medium.register(ressource_type)
+
 
 class Rule(object):
 

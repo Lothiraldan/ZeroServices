@@ -206,6 +206,9 @@ class ZeroMQMedium(object):
         sock.sendto(json.dumps(self.get_service_info()).encode('utf-8'),
                 (self.MCAST_ADDR, self.MCAST_PORT))
 
+    def subscribe(self, topic):
+        self.sub.setsockopt(zmq.SUBSCRIBE, topic.encode('utf-8'))
+
     def process_sub(self, message):
         self.logger.info('Process raw sub: %s' % message)
         message_type, data = message[0].decode('utf-8').split(' ', 1)

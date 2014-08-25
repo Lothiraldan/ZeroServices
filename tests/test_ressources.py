@@ -365,6 +365,8 @@ class RessourceWorkerTestCase(unittest.TestCase):
         self.assertEqual(service_info['node_type'], 'worker')
         self.assertEqual(service_info['ressources'], [])
 
+        self.assertEqual(self.medium.register.call_count, 0)
+
     def test_worker_registration(self):
 
         ressource_name = self.ressource_name
@@ -385,6 +387,10 @@ class RessourceWorkerTestCase(unittest.TestCase):
         self.assertEqual(service_info['node_type'], 'worker')
         self.assertEqual(service_info['ressources'],
             [self.ressource_name])
+
+        self.assertEqual(self.medium.register.call_count, 1)
+        self.assertEqual(self.medium.register.call_args,
+            call(self.ressource_name))
 
     def test_worker_registration_matcher(self):
 
@@ -407,6 +413,10 @@ class RessourceWorkerTestCase(unittest.TestCase):
         self.assertEqual(service_info['node_type'], 'worker')
         self.assertEqual(service_info['ressources'],
             [self.ressource_name])
+
+        self.assertEqual(self.medium.register.call_count, 1)
+        self.assertEqual(self.medium.register.call_args,
+            call(self.ressource_name))
 
 
 class RessourceTestCase(unittest.TestCase):

@@ -3,3 +3,4 @@ tornado
 pymongo
 mock
 voluptuous
+requests

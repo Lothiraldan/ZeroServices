@@ -130,11 +130,10 @@ class ZeroMQMedium(BaseMedium):
         self.ioloop.stop()
 
     def get_node_info(self):
-        node_info = self.service.service_info()
+        node_info = super(ZeroMQMedium, self).get_node_info()
 
         node_info['server_port'] = self.server_port
         node_info['pub_port'] = self.pub_port
-        node_info['node_id'] = self.node_id
 
         return node_info
 
@@ -193,18 +192,15 @@ class ZeroMQMedium(BaseMedium):
     def subscribe(self, topic):
         self.sub.setsockopt(zmq.SUBSCRIBE, topic.encode('utf-8'))
 
-    def process_sub(self, message):
-        self.logger.info('Process raw sub: %s' % message)
-        message_type, data = message[0].decode('utf-8').split(' ', 1)
+    def process_sub(self, event_message):
+        self.logger.info('Process raw sub: %s' % event_message)
+        message_type, data = event_message[0].decode('utf-8').split(' ', 1)
         data = json.loads(data)
 
         self.logger.info('Process sub, message_type: %s, data: %s' %
             (message_type, data))
 
-        if message_type == 'close':
-            self.service.on_peer_leave(data)
-        else:
-            self.service.on_event(message_type, data)
+        self.process_event(message_type, data)
 
         # for socket in self.events_republishers:
         #     self.logger.info('Republish %s on %s' % (message[0], socket))
@@ -220,21 +216,21 @@ class ZeroMQMedium(BaseMedium):
         self.logger.info('Process raw query, message_type: %s, message: %s' %
             (message_type, message))
 
-        if message_type == 'register':
-            self.service.on_registration_message(message)
-        else:
-            result = self.service.on_message(message_type=message_type,
-                                             **message)
+        result = self.process_message(message, message_type)
+
+        if result:
             self.server.send_multipart((sender_uuid, json.dumps(result).encode('utf-8')))
+
 
     def process_register(self, *args):
         data, address = self.udp_socket.recvfrom(1024)
         self.logger.info('Process register, data: %s, from %s' %
             (data, address[0]))
-        data = json.loads(data.decode('utf-8'))
+        registraton_message = json.loads(data.decode('utf-8'))
         address = (address[0], self.MCAST_PORT)
-        data['address'] = address[0]
-        self.service.on_registration_message(data)
+        registraton_message['address'] = address[0]
+
+        self.process_message(registraton_message, 'register')
         # if self.save_register_info(data):
         #     self.register_to(data)
         # self.logger.info('Self ressources map: %s' % self.services_ressources)
@@ -263,7 +259,7 @@ class ZeroMQMedium(BaseMedium):
         pub_message = pub_message.encode('utf-8')
         self.pub.send(pub_message)
 
-    def send(self, peer_info, message, msg_type="message", callback=None,
+    def send(self, peer_info, message, message_type="message", callback=None,
              wait_response=True):
         address = peer_info['address']
         port = peer_info['server_port']
@@ -278,8 +274,9 @@ class ZeroMQMedium(BaseMedium):
             stream = ZMQStream(request_socket, self.ioloop)
             stream.on_recv(on_recv)
 
-        self.logger.info('Send %s/%s to %s' % (msg_type, json.dumps(message), address))
-        message = (msg_type.encode('utf-8'), json.dumps(message).encode('utf-8'))
+        log_info = (message_type, json.dumps(message), address)
+        self.logger.info('Send %s/%s to %s' % log_info)
+        message = (message_type.encode('utf-8'), json.dumps(message).encode('utf-8'))
         request_socket.send_multipart(message)
 
         if not wait_response:

@@ -148,7 +148,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         message = {'hello': 'world'}
         message_type = "custom_message_type"
         self.assertEqual(self.service2.medium.send(r_msg, message,
-                            msg_type=message_type),
+                            message_type=message_type),
                          return_value)
 
         self.ioloop.start()

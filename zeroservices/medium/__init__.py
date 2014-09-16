@@ -31,22 +31,40 @@ class BaseMedium(object):
     def subscribe(self, topic):
         pass
 
-    @abstractmethod
     def get_node_info(self):
-        pass
+        node_info = self.service.service_info()
+        node_info['node_id'] = self.node_id
+
+        return node_info
 
     @abstractmethod
     def publish(self, event_type, event_data):
         pass
 
+    def process_event(self, message_type, event_message):
+        if message_type == 'close':
+            self.service.on_peer_leave(event_message)
+        elif message_type == 'register':
+            self.service.on_registration_message(event_message)
+        else:
+            self.service.on_event(message_type, event_message)
+
     @abstractmethod
-    def send(self, peer_info, message, msg_type="message", callback=None,
+    def send(self, peer_info, message, messsage_type="message", callback=None,
              wait_response=True):
         pass
+
+    def process_message(self, message, message_type):
+        if message_type == 'register':
+            self.service.on_registration_message(message)
+        else:
+            return self.service.on_message(message_type=message_type,
+                                           **message)
 
     @abstractmethod
     def connect_to_node(self, peer_info):
         pass
+
 
     def send_registration_answer(self, peer_info, node_info=None):
         if node_info is None:
@@ -61,8 +79,8 @@ class BaseMedium(object):
             'medium'))
         self.logger.setLevel(logging.DEBUG)
 
-        self.logger.info('Start %s, listen to %s and publish to %s' %
-            (service.name, self.server_port, self.pub_port))
+        self.logger.info('Start %s, node_info: %s' %
+            (service.name, self.get_node_info()))
 
 
 from .zeromq import ZeroMQMedium

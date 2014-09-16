@@ -60,84 +60,32 @@ def base_ressource():
 
     return BaseRessource
 
-
-def gen_service(base_service, save_entries=None):
-
-    if save_entries is None:
-        save_entries = False
-
-    class TestService(base_service):
-
-        def __init__(self):
-            self.queries = []
-            self.events = []
-            self.save_entries = save_entries
-            self.logger = logging.getLogger()
-
-        def main(self):
-            pass
-
-        def stop(self):
-            del ServiceRegistry.SERVICES[self.name]
-            for ressource in self.ressources:
-                del ServiceRegistry.SERVICES_RESSOURCES[ressource]
-
-        def register(self):
-            ServiceRegistry.SERVICES[self.name] = self
-            for ressource in self.ressources:
-                ServiceRegistry.SERVICES_RESSOURCES[ressource] = self
-
-        def call(self, action, **kwargs):
-            service, action = map(str, action.split('.', 1))
-            kwargs = {str(key): value for key, value in kwargs.items()}
-            return ServiceRegistry.SERVICES[service].process_query((action, json.dumps(kwargs)))
-
-        def publish(self, etype, event):
-            raw_event = ('%s %s' % (etype, event),)
-            for service in ServiceRegistry.SERVICES.values():
-                if service != self:
-                    service.process_event(raw_event)
-
-        def process_query(self, query):
-            if self.save_entries:
-                self.queries.append(query)
-            return super(TestService, self).process_query(query)
-
-        def process_event(self, event):
-            if self.save_entries:
-                self.events.append(event)
-            super(TestService, self).process_event(event)
-
-    return TestService()
-
 # Test memory medium
 
 SERVICES = {}
-RESSOURCES = {}
 
-class MemoryMedium(object):
+class MemoryMedium(BaseMedium):
 
-    def __init__(self, service_info, event_callback, msg_callback,
-            port_random=False):
-        self.service_info = service_info
-        self.service_name = service_info['name']
-
-        # Callbacks
-        self.event_callback = event_callback
-        self.msg_callback = msg_callback
-
-        SERVICES[service_info['name']] = self
-
-        for ressource in service_info.get('ressources', []):
-            RESSOURCES[ressource] = self
-
-        self.logger = logging.getLogger(self.service_info['name'])
+    def __init__(self, node_id):
+        super(MemoryMedium, self).__init__(node_id)
 
     def register(self):
-        pass
+        # Register myself to global
+        SERVICES[self.node_id] = self
+
+        self.publish('register', self.get_node_info())
 
     def start(self):
         pass
+
+    def close(self):
+        del SERVICES[self.node_id]
+
+    def connect_to_node(self, peer_info):
+        pass
+
+    def subscribe(self, topic):
+        self.topics.append(topic)
 
     def process_sub(self, message_type, data):
         self.logger.info('Process sub, message_type: %s, data: %s' %
@@ -151,20 +99,16 @@ class MemoryMedium(object):
         return self.msg_callback(message_type, **message)
 
     def publish(self, event_type, event_data):
-        for service in [s for s in SERVICES.values() if s.service_name != self.service_name]:
-            service.process_sub(event_type, event_data)
+        print "Publish", locals()
+        for service in [s for s in SERVICES.values() if s.node_id != self.node_id]:
+            print "Publish to", service, service.node_id
+            service.process_event(event_type, event_data)
 
-    def call(self, action, **kwargs):
-        service_id, action = map(str, action.split('.', 1))
-
+    def send(self, peer_info, message, message_type="message", callback=None,
+             wait_response=True):
         try:
-            service = RESSOURCES[service_id]
+            service = SERVICES[peer_info['node_id']]
         except KeyError:
             raise ServiceUnavailable('Service %s is unavailable.' % service_id)
 
-        return service.process_raw_query(action, kwargs)
-
-    def close(self):
-        del SERVICES[self.service_info['name']]
-        for ressource in self.service_info.get('ressources', []):
-            del RESSOURCES[ressource]
+        return service.process_message(message, message_type)

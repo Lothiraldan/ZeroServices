@@ -71,10 +71,10 @@ class BaseService(object):
     def on_peer_leave(self, node_info):
         pass
 
-    def on_message(self, *args, **kwargs):
+    def on_message(self, message_type, *args, **kwargs):
         pass
 
-    def on_event(self, *args, **kwargs):
+    def on_event(self, message_type, *args, **kwargs):
         pass
 
     def send(self, node_id, message, **kwargs):

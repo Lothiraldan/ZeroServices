@@ -13,6 +13,7 @@ except ImportError:
 from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.ressources import RessourceCollection, Ressource
 from zeroservices.medium import BaseMedium
+from zeroservices import BaseService
 
 
 def test_medium():
@@ -60,9 +61,18 @@ def base_ressource():
 
     return BaseRessource
 
+
+class TestService(BaseService):
+
+    def __init__(self, *args, **kwargs):
+        super(TestService, self).__init__(*args, **kwargs)
+        self.on_message = create_autospec(self.on_message, return_value=None)
+        self.on_event = create_autospec(self.on_event, return_value=None)
+
 # Test memory medium
 
 SERVICES = {}
+SERVICES_LIST = []
 
 class MemoryMedium(BaseMedium):
 
@@ -72,6 +82,7 @@ class MemoryMedium(BaseMedium):
     def register(self):
         # Register myself to global
         SERVICES[self.node_id] = self
+        SERVICES_LIST.append(self)
 
         self.publish('register', self.get_node_info())
 
@@ -80,6 +91,7 @@ class MemoryMedium(BaseMedium):
 
     def close(self):
         del SERVICES[self.node_id]
+        SERVICES_LIST.remove(self)
 
     def connect_to_node(self, peer_info):
         pass
@@ -99,9 +111,7 @@ class MemoryMedium(BaseMedium):
         return self.msg_callback(message_type, **message)
 
     def publish(self, event_type, event_data):
-        print "Publish", locals()
-        for service in [s for s in SERVICES.values() if s.node_id != self.node_id]:
-            print "Publish to", service, service.node_id
+        for service in [s for s in SERVICES_LIST if s.node_id != self.node_id]:
             service.process_event(event_type, event_data)
 
     def send(self, peer_info, message, message_type="message", callback=None,

@@ -1,9 +1,3 @@
-import zmq
-import time
-import json
-import socket
-import logging
-
 try:
     from unittest.mock import Mock, create_autospec
 except ImportError:
@@ -11,7 +5,7 @@ except ImportError:
 
 
 from zeroservices.exceptions import ServiceUnavailable
-from zeroservices.ressources import RessourceCollection, Ressource
+from zeroservices.ressources import RessourceCollection, Ressource, is_callable
 from zeroservices.medium import BaseMedium
 from zeroservices import BaseService
 
@@ -74,10 +68,12 @@ class TestService(BaseService):
 SERVICES = {}
 SERVICES_LIST = []
 
+
 class MemoryMedium(BaseMedium):
 
     def __init__(self, node_id):
         super(MemoryMedium, self).__init__(node_id)
+        self.topics = []
 
     def register(self):
         # Register myself to global
@@ -122,3 +118,85 @@ class MemoryMedium(BaseMedium):
             raise ServiceUnavailable('Service %s is unavailable.' % service_id)
 
         return service.process_message(message, message_type)
+
+# Memory Collection
+
+
+class MemoryRessource(Ressource):
+
+    def __init__(self, collection, **kwargs):
+        super(MemoryRessource, self).__init__(**kwargs)
+        self.collection = collection
+
+    @is_callable
+    def create(self, ressource_data):
+        self.collection[self.ressource_id] = ressource_data
+        return {'ressource_id': self.ressource_id}
+
+    @is_callable
+    def get(self):
+        try:
+            ressource = {'ressource_id': self.ressource_id,
+                         'ressource_data': self.collection[self.ressource_id]}
+        except KeyError:
+            return 'NOK'
+        return ressource
+
+    @is_callable
+    def patch(self, patch):
+        print 'Patch', patch
+
+        ressource = self.collection[self.ressource_id]
+
+        set_keys = patch['$set']
+        for key, value in set_keys.items():
+            ressource[key] = value
+
+        return ressource
+
+    @is_callable
+    def delete(self):
+        del self.collection[self.ressource_id]
+        return 'OK'
+
+    @is_callable
+    def add_link(self, relation, target_id, title):
+        ressource = self.collection[self.ressource_id]
+        links = ressource.setdefault('_links', {})
+        links[relation] = [{'target_id': target_id, 'title': title}]
+        return 'OK'
+
+
+class MemoryCollection(RessourceCollection):
+
+    def __init__(self, collection_name):
+        super(MemoryCollection, self).__init__(MemoryRessource, collection_name)
+        self._collection = {}
+
+    def instantiate(self, **kwargs):
+        return super(MemoryCollection, self).instantiate(
+            collection=self._collection, **kwargs)
+
+    @is_callable
+    def list(self, where=None):
+        ressources = []
+        for ressource_id, ressource_data in self._collection.items():
+
+            # Filtering happens here
+            if where:
+                error = False
+
+                # Check key by key values
+                for where_key, where_value in where.items():
+                    if ressource_data[where_key] != where[where_key]:
+                        error = True
+                        break
+
+                # If one where condition fail, do not return this ressource
+                if error:
+                    continue
+
+            ressources.append({'ressource_id': ressource_id,
+                               'ressource_data': ressource_data})
+
+        return ressources

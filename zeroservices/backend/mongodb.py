@@ -17,7 +17,7 @@ class MongoDBRessource(Ressource):
         self.document_data.update(ressource_data)
         self.collection.insert(self.document_data)
 
-        self.publish({'action': 'new', 'ressource_data': ressource_data})
+        self.publish({'action': 'create', 'ressource_data': ressource_data})
 
         return {'ressource_id': self.ressource_id}
 
@@ -38,12 +38,13 @@ class MongoDBRessource(Ressource):
 
         self.publish({'action': 'patch', 'patch': patch})
 
+        new_document.pop('_id')
         return new_document
 
     @is_callable
     def delete(self):
         self.collection.remove({'_id': self.ressource_id})
-        self.publish({'action': 'remove'})
+        self.publish({'action': 'delete'})
         return 'OK'
 
     @is_callable

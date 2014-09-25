@@ -131,6 +131,7 @@ class MemoryRessource(Ressource):
     @is_callable
     def create(self, ressource_data):
         self.collection[self.ressource_id] = ressource_data
+        self.publish({'action': 'create', 'ressource_data': ressource_data})
         return {'ressource_id': self.ressource_id}
 
     @is_callable
@@ -144,19 +145,20 @@ class MemoryRessource(Ressource):
 
     @is_callable
     def patch(self, patch):
-        print 'Patch', patch
-
         ressource = self.collection[self.ressource_id]
 
         set_keys = patch['$set']
         for key, value in set_keys.items():
             ressource[key] = value
 
+        self.publish({'action': 'patch', 'patch': patch})
+
         return ressource
 
     @is_callable
     def delete(self):
         del self.collection[self.ressource_id]
+        self.publish({'action': 'delete'})
         return 'OK'
 
     @is_callable
@@ -164,6 +166,8 @@ class MemoryRessource(Ressource):
         ressource = self.collection[self.ressource_id]
         links = ressource.setdefault('_links', {})
         links[relation] = [{'target_id': target_id, 'title': title}]
+        self.publish({'action': 'add_link', 'target_id': target_id,
+                      'title': title})
         return 'OK'
 
 

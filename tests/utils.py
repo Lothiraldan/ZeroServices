@@ -5,7 +5,8 @@ except ImportError:
 
 
 from zeroservices.exceptions import ServiceUnavailable
-from zeroservices.ressources import RessourceCollection, Ressource, is_callable
+from zeroservices.ressources import (RessourceCollection, Ressource,
+                                     is_callable, RessourceService)
 from zeroservices.medium import BaseMedium
 from zeroservices import BaseService
 from zeroservices.query import match
@@ -33,6 +34,11 @@ def sample_ressource():
     ressource_instance = create_autospec(Ressource, True, instance=True)
     ressource_class.return_value = ressource_instance
     return ressource_class, ressource_instance
+
+
+def sample_service():
+    service = create_autospec(RessourceService, True, instance=True)
+    return service
 
 
 def base_ressource():

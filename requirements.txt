@@ -4,3 +4,4 @@ pymongo
 mock
 voluptuous
 requests
+responses

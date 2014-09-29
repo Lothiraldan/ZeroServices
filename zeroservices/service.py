@@ -47,13 +47,15 @@ class BaseService(object):
             logging.exception(e)
             return
 
-        if node_info['node_type'] == 'node':
-            self.on_registration_message_node(node_info)
-
-    def on_registration_message_node(self, node_info):
         if node_info['node_id'] == self.medium.node_id:
             return
 
+        if node_info['node_type'] == 'node':
+            self.on_registration_message_node(node_info)
+        elif node_info['node_type'] == 'worker':
+            self.on_registration_message_worker(node_info)
+
+    def on_registration_message_node(self, node_info):
         if node_info['node_id'] in self.nodes_directory:
             return
 
@@ -62,8 +64,14 @@ class BaseService(object):
         self.medium.send_registration_answer(node_info)
         self.on_peer_join(node_info)
 
+    def on_registration_message_worker(self, node_info):
+        pass
+
     def save_new_node_info(self, node_info):
         self.nodes_directory[node_info['node_id']] = node_info
+
+    def get_known_nodes(self):
+        return self.nodes_directory.keys()
 
     def on_peer_join(self, node_info):
         pass

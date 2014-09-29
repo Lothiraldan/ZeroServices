@@ -79,7 +79,7 @@ class BaseMedium(object):
             'medium'))
         self.logger.setLevel(logging.DEBUG)
 
-        self.logger.info('Start %s, node_info: %s' %
+        self.logger.info('Set service %s, node_info: %s' %
             (service.name, self.get_node_info()))
 
 

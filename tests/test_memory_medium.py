@@ -1,12 +1,12 @@
 import unittest
 
 try:
-    from unittest.mock import Mock, call
+    from unittest.mock import call
 except ImportError:
-    from mock import Mock, call
+    from mock import call
 
-from zeroservices import BaseService
 from .utils import MemoryMedium, TestService
+
 
 class MemoryMediumCommunicationTestCase(unittest.TestCase):
 
@@ -33,12 +33,12 @@ class MemoryMediumCommunicationTestCase(unittest.TestCase):
         self.service2.main()
         self.service3.main()
 
-        self.assertItemsEqual(self.service1.nodes_directory.keys(),
-            ['node2', 'node3'])
-        self.assertItemsEqual(self.service2.nodes_directory.keys(),
-            ['node1', 'node3'])
-        self.assertItemsEqual(self.service3.nodes_directory.keys(),
-            ['node1', 'node2'])
+        self.assertItemsEqual(self.service1.get_known_nodes(),
+                              ['node2', 'node3'])
+        self.assertItemsEqual(self.service2.get_known_nodes(),
+                              ['node1', 'node3'])
+        self.assertItemsEqual(self.service3.get_known_nodes(),
+                              ['node1', 'node2'])
 
     def test_diffusion(self):
         self.service1.main()
@@ -48,9 +48,9 @@ class MemoryMediumCommunicationTestCase(unittest.TestCase):
         self.medium1.publish('type1', 'message1')
 
         self.assertEqual(self.service2.on_event.call_args_list,
-            [call('type1', 'message1')])
+                         [call('type1', 'message1')])
         self.assertEqual(self.service3.on_event.call_args_list,
-            [call('type1', 'message1')])
+                         [call('type1', 'message1')])
 
     def test_direct_call(self):
         self.service1.main()
@@ -64,7 +64,7 @@ class MemoryMediumCommunicationTestCase(unittest.TestCase):
         self.service2.on_message.return_value = result
 
         self.assertEqual(self.service1.send('node2', msg,
-            message_type=message_type), result)
+                                            message_type=message_type), result)
 
         self.assertEqual(self.service2.on_message.call_args_list,
-            [call(message_type=message_type, **msg)])
+                         [call(message_type=message_type, **msg)])

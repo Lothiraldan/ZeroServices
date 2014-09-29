@@ -1,5 +1,6 @@
 from .service import BaseService
 from .exceptions import UnknownService, RessourceException
+from .query import match
 from abc import ABCMeta, abstractmethod
 from uuid import uuid4
 
@@ -17,9 +18,10 @@ def is_callable(method):
 class RessourceService(BaseService):
 
     def __init__(self, name, medium):
-        super(RessourceService, self).__init__(name, medium)
         self.ressources = {}
         self.ressources_directory = {}
+        self.ressources_worker_directory = {}
+        super(RessourceService, self).__init__(name, medium)
 
     def service_info(self):
         return {'name': self.name, 'ressources': self.ressources.keys(),
@@ -30,6 +32,17 @@ class RessourceService(BaseService):
 
         for ressource in node_info.get('ressources', ()):
             self.ressources_directory[ressource] = node_info['node_id']
+
+    def on_registration_message_worker(self, node_info):
+        for ressource_type in node_info['ressources']:
+            if ressource_type in self.ressources.keys():
+                ressources_workers = self.ressources_worker_directory.setdefault(
+                    ressource_type, {})
+                # TODO, change medium node_id ?
+                ressources_workers[node_info['name']] = node_info
+
+        self.medium.send_registration_answer(node_info)
+        self.on_peer_join(node_info)
 
     def on_message(self, collection, message_type=None, *args, **kwargs):
         '''Ignore message_type for the moment
@@ -82,6 +95,10 @@ class RessourceService(BaseService):
 
         # Ressources collections
         self.ressources[collection.ressource_name] = collection
+
+    def get_known_worker_nodes(self):
+        return {ressource_type: workers.keys() for ressource_type, workers in
+                self.ressources_worker_directory.items()}
 
 
 class RessourceCollection(object):
@@ -164,29 +181,63 @@ class Ressource(object):
 
 class RessourceWorker(BaseService):
 
-    def __init__(self, medium):
-        name = 'worker-{:s}'.format(str(uuid4()))
-        super(RessourceWorker, self).__init__(name, medium)
+    def __init__(self, name, medium):
+        name = '{:s}-{:s}'.format(name, str(uuid4()))
         self.rules = {}
+        super(RessourceWorker, self).__init__(name, medium)
 
     def service_info(self):
         return {'name': self.name, 'ressources': self.rules.keys(),
                 'node_type': 'worker'}
 
+    def on_event(self, message_type, message):
+        ressource_name = message['ressource_name']
+        ressource_data = message['ressource_data']
+        ressource_id = message['ressource_id']
+
+        # See if one rule match
+        for rule in self.rules[ressource_name]:
+            if rule.match(ressource_data):
+                rule(ressource_name, ressource_data, ressource_id)
+
     def register(self, callback, ressource_type, **matcher):
-        rule = Rule(callback, ressource_type, matcher)
+        rule = Rule(callback, matcher)
         self.rules.setdefault(ressource_type, []).append(rule)
 
         # Register to events matching ressource_type
-        self.medium.register(ressource_type)
+        self.medium.subscribe(ressource_type)
 
 
 class Rule(object):
 
-    def __init__(self, callback, ressource_type, matcher):
+    """Util class for matching events
+
+    >>> from mock import Mock, sentinel
+    >>> ressource = {'foo': 'bar'}
+    >>> callback = Mock(return_value=sentinel.RETURN)
+    >>> rule = Rule(callback, {'foo': 'bar'})
+    >>> rule.match({'foo': 'not_bar'})
+    False
+    >>> rule.match(ressource)
+    True
+    >>> rule('Ressource', ressource, 'RessourceID')
+    sentinel.RETURN
+    >>> rule.callback.assert_called_once_with('Ressource', ressource, \
+            'RessourceID')
+    """
+
+    def __init__(self, callback, matcher):
         self.callback = callback
-        self.ressource_type = ressource_type
         self.matcher = matcher
+
+    def match(self, ressource):
+        return match(self.matcher, ressource)
+
+    def __call__(self, ressource_type, ressource, ressource_id):
+        return self.callback(ressource_type, ressource, ressource_id)
+
+    def __repr__(self):
+        return 'Rule({})'.format(self.__dict__)
 
 
 #### Exceptions

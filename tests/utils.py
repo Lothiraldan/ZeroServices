@@ -8,6 +8,7 @@ from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.ressources import RessourceCollection, Ressource, is_callable
 from zeroservices.medium import BaseMedium
 from zeroservices import BaseService
+from zeroservices.query import match
 
 
 def test_medium():
@@ -76,6 +77,8 @@ class MemoryMedium(BaseMedium):
         self.topics = []
 
     def register(self):
+        self.logger.info('Register %s', self.get_node_info())
+
         # Register myself to global
         SERVICES[self.node_id] = self
         SERVICES_LIST.append(self)
@@ -188,16 +191,7 @@ class MemoryCollection(RessourceCollection):
 
             # Filtering happens here
             if where:
-                error = False
-
-                # Check key by key values
-                for where_key, where_value in where.items():
-                    if ressource_data[where_key] != where[where_key]:
-                        error = True
-                        break
-
-                # If one where condition fail, do not return this ressource
-                if error:
+                if not match(where, ressource_data):
                     continue
 
             ressources.append({'ressource_id': ressource_id,

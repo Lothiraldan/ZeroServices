@@ -357,9 +357,11 @@ class RessourceWorkerTestCase(unittest.TestCase):
         collection = sample_collection(self.ressource_name)
         self.service.register_ressource(collection)
 
+        self.worker_base_name = "sample_worker"
+
     def test_worker_info(self):
 
-        worker = RessourceWorker(self.medium)
+        worker = RessourceWorker(self.worker_base_name, self.medium)
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
@@ -380,17 +382,16 @@ class RessourceWorkerTestCase(unittest.TestCase):
             def sample_action(self, ressource):
                 pass
 
-
-        worker = WorkerSample(self.medium)
+        worker = WorkerSample(self.worker_base_name, self.medium)
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
         self.assertEqual(service_info['ressources'],
-            [self.ressource_name])
+                         [self.ressource_name])
 
-        self.assertEqual(self.medium.register.call_count, 1)
-        self.assertEqual(self.medium.register.call_args,
-            call(self.ressource_name))
+        self.assertEqual(self.medium.subscribe.call_count, 1)
+        self.assertEqual(self.medium.subscribe.call_args,
+                         call(self.ressource_name))
 
     def test_worker_registration_matcher(self):
 
@@ -406,25 +407,16 @@ class RessourceWorkerTestCase(unittest.TestCase):
             def sample_action(self, ressource):
                 pass
 
-
-        worker = WorkerSample(self.medium)
+        worker = WorkerSample(self.worker_base_name, self.medium)
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
         self.assertEqual(service_info['ressources'],
-            [self.ressource_name])
+                         [self.ressource_name])
 
-        self.assertEqual(self.medium.register.call_count, 1)
-        self.assertEqual(self.medium.register.call_args,
-            call(self.ressource_name))
-
-
-class RessourceWorkerJoinTestCase(unittest.TestCase):
-
-    def test_worker_join_service(self):
-
-        self.name = "TestService"
-        self.service = RessourceService(self.name, self.medium)
+        self.assertEqual(self.medium.subscribe.call_count, 1)
+        self.assertEqual(self.medium.subscribe.call_args,
+                         call(self.ressource_name))
 
 
 class RessourceTestCase(unittest.TestCase):

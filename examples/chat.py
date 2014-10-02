@@ -61,6 +61,9 @@ class MainHandler(web.RequestHandler):
 
 class WebSocketHandler(websocket.WebSocketHandler):
 
+    def check_origin(self, origin):
+        return True
+
     def open(self):
         """Called on new websocket connection
         """

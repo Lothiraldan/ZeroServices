@@ -196,7 +196,7 @@ class RessourceWorker(BaseService):
         ressource_id = message['ressource_id']
 
         # See if one rule match
-        for rule in self.rules[ressource_name]:
+        for rule in self.rules.get(ressource_name, ()):
             if rule.match(ressource_data):
                 rule(ressource_name, ressource_data, ressource_id)
 

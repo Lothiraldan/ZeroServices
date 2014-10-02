@@ -27,6 +27,11 @@ class RessourceWorkerUnitTestCase(TestCase):
                                'ressource_data': {},
                                'ressource_id': 'doesn\'t matter'})
 
+    def test_no_data(self):
+        self.worker1.on_event('unknown_ressource',
+                              {'ressource_name': 'unknown_ressource',
+                               'ressource_id': 'doesn\'t matter'})
+
 
 class RessourceWorkerTestCase(TestCase):
 

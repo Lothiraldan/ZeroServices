@@ -192,7 +192,7 @@ class RessourceWorker(BaseService):
 
     def on_event(self, message_type, message):
         ressource_name = message['ressource_name']
-        ressource_data = message['ressource_data']
+        ressource_data = message.get('ressource_data')
         ressource_id = message['ressource_id']
 
         # See if one rule match

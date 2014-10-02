@@ -6,3 +6,4 @@ voluptuous
 requests
 responses
 nose
+six

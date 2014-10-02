@@ -25,12 +25,14 @@ class RessourceWorkerUnitTestCase(TestCase):
         self.worker1.on_event('unknown_ressource',
                               {'ressource_name': 'unknown_ressource',
                                'ressource_data': {},
-                               'ressource_id': 'doesn\'t matter'})
+                               'ressource_id': 'doesn\'t matter',
+                               'action': 'create'})
 
     def test_no_data(self):
         self.worker1.on_event('unknown_ressource',
                               {'ressource_name': 'unknown_ressource',
-                               'ressource_id': 'doesn\'t matter'})
+                               'ressource_id': 'doesn\'t matter',
+                               'action': 'create'})
 
 
 class RessourceWorkerTestCase(TestCase):
@@ -79,4 +81,5 @@ class RessourceWorkerTestCase(TestCase):
         self.collection1.on_message(**query)
 
         self.callback.assert_called_once_with(self.ressource_name,
-                                              ressource_data, ressource_id)
+                                              ressource_data, ressource_id,
+                                              query['action'])

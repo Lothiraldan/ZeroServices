@@ -193,12 +193,13 @@ class RessourceWorker(BaseService):
     def on_event(self, message_type, message):
         ressource_name = message['ressource_name']
         ressource_data = message.get('ressource_data')
+        action = message['action']
         ressource_id = message['ressource_id']
 
         # See if one rule match
         for rule in self.rules.get(ressource_name, ()):
             if rule.match(ressource_data):
-                rule(ressource_name, ressource_data, ressource_id)
+                rule(ressource_name, ressource_data, ressource_id, action)
 
     def register(self, callback, ressource_type, **matcher):
         rule = Rule(callback, matcher)
@@ -233,8 +234,8 @@ class Rule(object):
     def match(self, ressource):
         return match(self.matcher, ressource)
 
-    def __call__(self, ressource_type, ressource, ressource_id):
-        return self.callback(ressource_type, ressource, ressource_id)
+    def __call__(self, *args, **kwargs):
+        return self.callback(*args, **kwargs)
 
     def __repr__(self):
         return 'Rule({})'.format(self.__dict__)

@@ -91,7 +91,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
             try:
                 payload.update(json.loads(self.request.body.decode('utf-8')))
-            except ValueError, UnicodeDecodeError:
+            except (ValueError, UnicodeDecodeError):
                 logger.exception('Bad body')
 
             payload.update({'collection': collection, 'action': action})

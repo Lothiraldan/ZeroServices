@@ -1,5 +1,4 @@
 import json
-import unittest
 import responses
 from mock import sentinel
 from base64 import b64encode
@@ -7,8 +6,10 @@ from requests.exceptions import HTTPError
 
 from zeroservices.services import BaseHTTPClient, BasicAuthHTTPClient
 from zeroservices.services import get_http_interface, BasicAuth
+from ..utils import TestCase
 
-class BaseHttpClientTestCase(unittest.TestCase):
+
+class BaseHttpClientTestCase(TestCase):
 
     def setUp(self):
         self.base_url = "http://localhost"
@@ -146,7 +147,7 @@ class BaseHttpClientTestCase(unittest.TestCase):
             response = self.client[self.collection_name][self.ressource_id].get()
 
 
-class BasicAuthClientTestCase(unittest.TestCase):
+class BasicAuthClientTestCase(TestCase):
 
     def setUp(self):
         self.base_url = "http://localhost"

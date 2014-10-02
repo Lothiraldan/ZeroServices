@@ -1,8 +1,6 @@
-import unittest
-
 from zeroservices import BaseService
 from zeroservices.exceptions import UnknownNode
-from .utils import test_medium
+from .utils import test_medium, TestCase
 
 try:
     from unittest.mock import Mock, call
@@ -10,7 +8,7 @@ except ImportError:
     from mock import Mock, call
 
 
-class BaseServiceTestCase(unittest.TestCase):
+class BaseServiceTestCase(TestCase):
 
     def setUp(self):
         self.name = "TestService"

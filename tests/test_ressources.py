@@ -1,9 +1,10 @@
+import sys
 import unittest
 
 from zeroservices import RessourceService, RessourceCollection, RessourceWorker
 from zeroservices.ressources import NoActionHandler, is_callable, Ressource
 from zeroservices.exceptions import UnknownService, RessourceException
-from .utils import test_medium, sample_collection, sample_ressource, base_ressource
+from .utils import test_medium, sample_collection, sample_ressource, base_ressource, TestCase
 from copy import deepcopy
 
 
@@ -13,7 +14,7 @@ except ImportError:
     from mock import call, Mock, patch, sentinel
 
 
-class RessourceServiceTestCase(unittest.TestCase):
+class RessourceServiceTestCase(TestCase):
 
     def setUp(self):
         self.name = "TestService"
@@ -50,6 +51,21 @@ class RessourceServiceTestCase(unittest.TestCase):
         self.assertEqual(self.service.on_peer_join.call_count, 1)
         mock_call = self.service.on_peer_join.call_args
         self.assertEqual(mock_call, call(node_info))
+
+    @unittest.skipIf(sys.version_info[0] > 2,
+                     "Check if unicode is supported on python 2")
+    def test_join_unicode(self):
+        ressource = u'TestRessource'
+
+        self.service.on_peer_join = Mock()
+        node_info = {u'node_id': u'sample', u'name': u'Sample Service',
+                     u'ressources': [ressource], u'node_type': u'node'}
+
+        self.service.on_registration_message(node_info)
+        self.assertEqual(self.service.nodes_directory,
+                         {node_info['node_id']: node_info})
+        self.assertEqual(self.service.ressources_directory,
+                         {ressource: node_info['node_id']})
 
     def test_ressource_registration(self):
         ressource_name = 'TestCollection'
@@ -132,7 +148,7 @@ class RessourceServiceTestCase(unittest.TestCase):
             self.service.send(**call_request)
 
 
-class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
+class RessourceServiceFakeCollectionTestCase(TestCase):
 
     def setUp(self):
         self.name = "TestService"
@@ -206,7 +222,7 @@ class RessourceServiceFakeCollectionTestCase(unittest.TestCase):
             call(**message_args))
 
 
-class RessourceCollectionTestCase(unittest.TestCase):
+class RessourceCollectionTestCase(TestCase):
 
     def setUp(self):
         self.ressource_name = 'Test'
@@ -346,7 +362,7 @@ class RessourceCollectionTestCase(unittest.TestCase):
             [call(self.ressource_name, publish_message)])
 
 
-class RessourceWorkerTestCase(unittest.TestCase):
+class RessourceWorkerTestCase(TestCase):
 
     def setUp(self):
         self.name = "TestService"
@@ -365,7 +381,7 @@ class RessourceWorkerTestCase(unittest.TestCase):
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
-        self.assertEqual(service_info['ressources'], [])
+        self.assertItemsEqual(service_info['ressources'], [])
 
         self.assertEqual(self.medium.register.call_count, 0)
 
@@ -386,8 +402,8 @@ class RessourceWorkerTestCase(unittest.TestCase):
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
-        self.assertEqual(service_info['ressources'],
-                         [self.ressource_name])
+        self.assertItemsEqual(service_info['ressources'],
+                              [self.ressource_name])
 
         self.assertEqual(self.medium.subscribe.call_count, 1)
         self.assertEqual(self.medium.subscribe.call_args,
@@ -411,15 +427,15 @@ class RessourceWorkerTestCase(unittest.TestCase):
 
         service_info = worker.service_info()
         self.assertEqual(service_info['node_type'], 'worker')
-        self.assertEqual(service_info['ressources'],
-                         [self.ressource_name])
+        self.assertItemsEqual(service_info['ressources'],
+                              [self.ressource_name])
 
         self.assertEqual(self.medium.subscribe.call_count, 1)
         self.assertEqual(self.medium.subscribe.call_args,
                          call(self.ressource_name))
 
 
-class RessourceTestCase(unittest.TestCase):
+class RessourceTestCase(TestCase):
 
     def setUp(self):
         self.ressource_name = 'Test'

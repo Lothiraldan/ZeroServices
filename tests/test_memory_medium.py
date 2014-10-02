@@ -1,14 +1,12 @@
-import unittest
-
 try:
     from unittest.mock import call
 except ImportError:
     from mock import call
 
-from .utils import MemoryMedium, TestService
+from .utils import MemoryMedium, TestService, TestCase
 
 
-class MemoryMediumCommunicationTestCase(unittest.TestCase):
+class MemoryMediumCommunicationTestCase(TestCase):
 
     def setUp(self):
         self.medium1 = MemoryMedium('node1')

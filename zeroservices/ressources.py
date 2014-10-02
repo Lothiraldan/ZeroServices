@@ -97,7 +97,7 @@ class RessourceService(BaseService):
         self.ressources[collection.ressource_name] = collection
 
     def get_known_worker_nodes(self):
-        return {ressource_type: workers.keys() for ressource_type, workers in
+        return {ressource_type: list(workers.keys()) for ressource_type, workers in
                 self.ressources_worker_directory.items()}
 
 

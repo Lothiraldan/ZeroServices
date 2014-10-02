@@ -2,7 +2,6 @@ import zmq
 import json
 import time
 import socket
-import unittest
 
 from datetime import timedelta
 from time import sleep, time
@@ -14,9 +13,10 @@ except ImportError:
 
 from zeroservices.medium.zeromq import ZeroMQMedium
 from .utils import generate_zeromq_medium
+from ..utils import TestCase
 
 
-class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
+class ZeroMQMediumRegistrationTestCase(TestCase):
 
     def setUp(self):
         from zmq.eventloop.ioloop import IOLoop
@@ -185,7 +185,7 @@ class ZeroMQMediumRegistrationTestCase(unittest.TestCase):
         self.assertEqual(response, call(return_value))
 
 
-class ZeroMQMediumCloseTestCase(unittest.TestCase):
+class ZeroMQMediumCloseTestCase(TestCase):
 
     def setUp(self):
         from zmq.eventloop.ioloop import IOLoop

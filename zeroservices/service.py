@@ -5,20 +5,15 @@ import traceback
 
 from copy import copy
 from tornado import gen
-from voluptuous import Schema, MultipleInvalid, Required
 
 from zeroservices.medium.zeromq import ZeroMQMedium
 from zeroservices.utils import maybe_asynchronous
 from zeroservices.exceptions import UnknownNode
+from zeroservices.validation import REGISTRATION_SCHEMA, MultipleInvalid
 
 logging.basicConfig(level=logging.DEBUG)
 
 DEFAULT_MEDIUM = ZeroMQMedium
-
-
-REGISTRATION_SCHEMA = Schema({Required('node_type'): str,
-                              Required('node_id'): str,
-                              Required('name'): str}, extra=True)
 
 
 class BaseService(object):
@@ -44,7 +39,8 @@ class BaseService(object):
         try:
             REGISTRATION_SCHEMA(node_info)
         except MultipleInvalid as e:
-            logging.exception(e)
+            message = "Invalid node_info: {}, raise Exception {}".format(node_info, e)
+            logging.exception(message)
             return
 
         if node_info['node_id'] == self.medium.node_id:

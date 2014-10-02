@@ -1,7 +1,5 @@
-import unittest
-
 from zeroservices import BaseService
-from ..utils import test_medium
+from ..utils import test_medium, TestCase
 
 try:
     from unittest.mock import Mock
@@ -9,7 +7,7 @@ except ImportError:
     from mock import Mock
 
 
-class _BaseCollectionTestCase(unittest.TestCase):
+class _BaseCollectionTestCase(TestCase):
 
     def setUp(self):
         self.service = Mock(spec_set=BaseService)
@@ -157,26 +155,26 @@ class _BaseCollectionTestCase(unittest.TestCase):
         message = {'action': 'list'}
         expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in
                     docs]
-        self.assertEqual(self.collection.on_message(**message),
-                         expected)
+        self.assertItemsEqual(self.collection.on_message(**message),
+                              expected)
 
         # Field1 = 1
         message = {'action': 'list', 'where': {'field1': 1}}
         expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in
                     docs if x[0]['field1'] == 1]
-        self.assertEqual(self.collection.on_message(**message),
-                         expected)
+        self.assertItemsEqual(self.collection.on_message(**message),
+                              expected)
 
         # Field1 = 3
         message = {'action': 'list', 'where': {'field1': 3}}
         expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in
                     docs if x[0]['field1'] == 3]
-        self.assertEqual(self.collection.on_message(**message),
-                         expected)
+        self.assertItemsEqual(self.collection.on_message(**message),
+                              expected)
 
         # Field2 = 2
         message = {'action': 'list', 'where': {'field2': 2}}
         expected = [{'ressource_id': x[1], 'ressource_data': x[0]} for x in
                     docs if x[0]['field2'] == 2]
-        self.assertEqual(self.collection.on_message(**message),
-                         expected)
+        self.assertItemsEqual(self.collection.on_message(**message),
+                              expected)

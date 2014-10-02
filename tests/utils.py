@@ -3,6 +3,7 @@ try:
 except ImportError:
     from mock import Mock, create_autospec
 
+from unittest import TestCase as unittestTestCase
 
 from zeroservices.exceptions import ServiceUnavailable
 from zeroservices.ressources import (RessourceCollection, Ressource,
@@ -10,6 +11,14 @@ from zeroservices.ressources import (RessourceCollection, Ressource,
 from zeroservices.medium import BaseMedium
 from zeroservices import BaseService
 from zeroservices.query import match
+
+
+class TestCase(unittestTestCase):
+
+    def assertItemsEqual(self, *args):
+        if hasattr(self, 'assertCountEqual'):
+            return self.assertCountEqual(*args)
+        return super(TestCase, self).assertItemsEqual(*args)
 
 
 def test_medium():

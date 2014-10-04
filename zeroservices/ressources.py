@@ -15,23 +15,45 @@ def is_callable(method):
     return method
 
 
-class RessourceService(BaseService):
+class BaseRessourceService(BaseService):
 
     def __init__(self, name, medium):
         self.ressources = {}
         self.ressources_directory = {}
         self.ressources_worker_directory = {}
-        super(RessourceService, self).__init__(name, medium)
+        super(BaseRessourceService, self).__init__(name, medium)
+
+    def save_new_node_info(self, node_info):
+        super(BaseRessourceService, self).save_new_node_info(node_info)
+
+        for ressource in node_info.get('ressources', ()):
+            self.ressources_directory[ressource] = node_info['node_id']
+
+    def send(self, collection, **kwargs):
+        message = kwargs
+        message.update({'collection': collection})
+
+        if collection in self.ressources.keys():
+            return self.on_message(**message)
+
+        try:
+            node_id = self.ressources_directory[collection]
+        except KeyError:
+            raise UnknownService("Unknown service {0}".format(collection))
+
+        result = super(BaseRessourceService, self).send(node_id, message)
+
+        if result['success'] is False:
+            raise RessourceException(result.pop("data"))
+
+        return result.pop("data")
+
+
+class RessourceService(BaseRessourceService):
 
     def service_info(self):
         return {'name': self.name, 'ressources': self.ressources.keys(),
                 'node_type': 'node'}
-
-    def save_new_node_info(self, node_info):
-        super(RessourceService, self).save_new_node_info(node_info)
-
-        for ressource in node_info.get('ressources', ()):
-            self.ressources_directory[ressource] = node_info['node_id']
 
     def on_registration_message_worker(self, node_info):
         for ressource_type in node_info['ressources']:
@@ -66,25 +88,6 @@ class RessourceService(BaseService):
         else:
             self.logger.debug("Success: {0}".format(result))
             return {'success': True, 'data': result}
-
-    def send(self, collection, **kwargs):
-        message = kwargs
-        message.update({'collection': collection})
-
-        if collection in self.ressources.keys():
-            return self.on_message(**message)
-
-        try:
-            node_id = self.ressources_directory[collection]
-        except KeyError:
-            raise UnknownService("Unknown service {0}".format(collection))
-
-        result = super(RessourceService, self).send(node_id, message)
-
-        if result['success'] == False:
-            raise RessourceException(result.pop("data"))
-
-        return result.pop("data")
 
     ### Utils
     def register_ressource(self, collection):
@@ -139,7 +142,6 @@ class RessourceCollection(object):
         pass
 
 
-
 class Ressource(object):
 
     __metaclass__ = ABCMeta
@@ -179,7 +181,7 @@ class Ressource(object):
         self.ressource_collection.publish(message)
 
 
-class RessourceWorker(BaseService):
+class RessourceWorker(BaseRessourceService):
 
     def __init__(self, name, medium):
         name = '{:s}-{:s}'.format(name, str(uuid4()))

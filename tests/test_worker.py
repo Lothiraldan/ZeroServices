@@ -3,6 +3,7 @@ try:
 except ImportError:
     from mock import Mock, call
 
+from copy import copy
 from zeroservices import RessourceService, RessourceCollection, RessourceWorker
 from .utils import test_medium, MemoryCollection
 from .utils import MemoryMedium, TestService, TestCase
@@ -46,10 +47,26 @@ class RessourceWorkerTestCase(TestCase):
         self.service1.register_ressource(self.collection1)
 
         self.medium2 = MemoryMedium('node2')
-        self.worker1 = RessourceWorker('worker1', self.medium2)
+
+        self.patch = {'kwarg_3': 3}
+
+        class SampleWorker(RessourceWorker):
+
+            def __init__(self, name, medium, patch):
+                super(SampleWorker, self).__init__(name, medium)
+                self.patch = patch
+
+            def sample_job(self, ressource_name, ressource_data, ressource_id,
+                           action):
+                if action == 'create':
+                    self.send(collection=ressource_name, action="patch",
+                              ressource_id=ressource_id,
+                              patch={'$set': self.patch})
+
+        self.worker1 = SampleWorker('worker1', self.medium2, self.patch)
 
         self.callback = Mock()
-        self.worker1.register(self.callback, self.ressource_name)
+        self.worker1.register(self.worker1.sample_job, self.ressource_name)
 
     def tearDown(self):
         self.service1.close()
@@ -80,6 +97,11 @@ class RessourceWorkerTestCase(TestCase):
 
         self.collection1.on_message(**query)
 
-        self.callback.assert_called_once_with(self.ressource_name,
-                                              ressource_data, ressource_id,
-                                              query['action'])
+        expected_ressource = copy(ressource_data)
+        expected_ressource.update(self.patch)
+
+        updated_ressource_data = self.collection1.on_message(action='get',
+                ressource_id=ressource_id)['ressource_data']
+        self.assertEqual(
+            updated_ressource_data,
+            expected_ressource)

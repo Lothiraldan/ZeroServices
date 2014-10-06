@@ -296,7 +296,6 @@ class HttpInterfaceWebsocketTestCase(HttpInterfaceTestCase):
         return 'ws'
 
     def test_get(self):
-
         client = websocket_connect(self.get_url(self.url), io_loop=self.io_loop,
                                    callback=self.stop)
         self.wait()

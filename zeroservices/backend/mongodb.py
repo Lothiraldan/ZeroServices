@@ -65,6 +65,7 @@ class MongoDBRessource(Ressource):
             self._document = self.collection.find_one({'_id': self.ressource_id})
         return self._document
 
+
 class MongoDBCollection(RessourceCollection):
 
     def __init__(self, collection_name):

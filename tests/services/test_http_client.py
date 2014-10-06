@@ -1,3 +1,4 @@
+import sys
 import json
 import responses
 from mock import sentinel
@@ -12,6 +13,9 @@ from ..utils import TestCase
 class BaseHttpClientTestCase(TestCase):
 
     def setUp(self):
+        self.old_argv = sys.argv
+        sys.argv = []
+
         self.base_url = "http://localhost"
         self.collection_name = "collection"
         self.ressource_id = "1"
@@ -25,6 +29,9 @@ class BaseHttpClientTestCase(TestCase):
         self.ressource_url = self.base_url + \
             self.app.reverse_url("ressource", self.collection_name,
                 self.ressource_id)
+
+    def tearDown(self):
+        sys.argv = self.old_argv
 
     @responses.activate
     def test_main(self):
@@ -150,6 +157,9 @@ class BaseHttpClientTestCase(TestCase):
 class BasicAuthClientTestCase(TestCase):
 
     def setUp(self):
+        self.old_argv = sys.argv
+        sys.argv = []
+
         self.base_url = "http://localhost"
         self.collection_name = "collection"
         self.ressource_id = "1"
@@ -164,6 +174,10 @@ class BasicAuthClientTestCase(TestCase):
         self.ressource_url = self.base_url + \
             self.app.reverse_url("ressource", self.collection_name,
                 self.ressource_id)
+
+
+    def tearDown(self):
+        sys.argv = self.old_argv
 
 
     @responses.activate

@@ -1,4 +1,5 @@
 import json
+import sys
 
 from base64 import b64encode
 from zeroservices.services import get_http_interface, BasicAuth
@@ -33,7 +34,12 @@ class HttpInterfaceTestCase(AsyncHTTPTestCase):
     def setUp(self):
         self.service = create_autospec(RessourceService, True, instance=True)
         self.collection_name = "test_collection"
+        self.old_argv = sys.argv
+        sys.argv = []
         super(HttpInterfaceTestCase, self).setUp()
+
+    def tearDown(self):
+        sys.argv = self.old_argv
 
     def get_app(self):
         port = self.get_http_port()

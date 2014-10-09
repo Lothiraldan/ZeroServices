@@ -65,6 +65,9 @@ class BaseMedium(object):
     def connect_to_node(self, peer_info):
         pass
 
+    @abstractmethod
+    def periodic_call(self, callback_time, callback):
+        pass
 
     def send_registration_answer(self, peer_info, node_info=None):
         if node_info is None:

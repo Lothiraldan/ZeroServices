@@ -58,7 +58,7 @@ class RessourceWorkerTestCase(TestCase):
 
             def sample_job(self, ressource_name, ressource_data, ressource_id,
                            action):
-                if action == 'create':
+                if action == 'create' or action == 'periodic':
                     self.send(collection=ressource_name, action="patch",
                               ressource_id=ressource_id,
                               patch={'$set': self.patch})
@@ -99,6 +99,38 @@ class RessourceWorkerTestCase(TestCase):
 
         expected_ressource = copy(ressource_data)
         expected_ressource.update(self.patch)
+
+        updated_ressource_data = self.collection1.on_message(action='get',
+                ressource_id=ressource_id)['ressource_data']
+        self.assertEqual(
+            updated_ressource_data,
+            expected_ressource)
+
+    def test_execute_job_on_startup(self):
+        # Start the service
+        self.service1.main()
+
+        # Create the ressource
+        ressource_id = 'UUID1'
+        ressource_data = {'kwarg_1': 1, 'kwarg_2': 2}
+        message_args = {'ressource_data': ressource_data,
+                        'ressource_id': ressource_id}
+        query = {'action': 'create'}
+        query.update(message_args)
+
+        self.collection1.on_message(**query)
+
+        # Start the worker after ressource creation
+        self.worker1.main()
+
+        # Check that jobs have been scheduled
+        self.assertEqual(len(self.medium2.callbacks), 1)
+        self.medium2.call_callbacks()
+
+        # Ressource should have been updated
+        expected_ressource = copy(ressource_data)
+        expected_ressource.update(self.patch)
+
 
         updated_ressource_data = self.collection1.on_message(action='get',
                 ressource_id=ressource_id)['ressource_data']

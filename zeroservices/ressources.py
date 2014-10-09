@@ -188,6 +188,22 @@ class RessourceWorker(BaseRessourceService):
         self.rules = {}
         super(RessourceWorker, self).__init__(name, medium)
 
+    def main(self):
+        super(RessourceWorker, self).main()
+
+        self.medium.periodic_call(30, self.poll_check)
+
+    def poll_check(self):
+        # Ask about existing ressources matching rule
+        for ressource_type, rules in self.rules.items():
+            for rule in rules:
+                matching_ressources = self.send(collection=ressource_type,
+                                                action="list",
+                                                where=rule.matcher)
+                for ressource in matching_ressources:
+                    rule(ressource_type, ressource['ressource_data'],
+                         ressource['ressource_id'], 'periodic')
+
     def service_info(self):
         return {'name': self.name, 'ressources': self.rules.keys(),
                 'node_type': 'worker'}

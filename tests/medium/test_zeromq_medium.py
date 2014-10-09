@@ -16,7 +16,7 @@ from .utils import generate_zeromq_medium
 from ..utils import TestCase
 
 
-class ZeroMQMediumRegistrationTestCase(TestCase):
+class ZeroMQMediumTestCase(TestCase):
 
     def setUp(self):
         from zmq.eventloop.ioloop import IOLoop
@@ -183,6 +183,22 @@ class ZeroMQMediumRegistrationTestCase(TestCase):
         response = stop.call_args
 
         self.assertEqual(response, call(return_value))
+
+    def test_periodic_callback(self):
+
+        callback = Mock(side_effect=self.ioloop.stop)
+
+        self.service1.medium.periodic_call(callback, 2)
+
+        self.ioloop.call_later(1, self.ioloop.stop)
+        self.ioloop.start()
+
+        self.assertEqual(callback.call_count, 1)
+
+        self.ioloop.call_later(1, self.ioloop.stop)
+        self.ioloop.start()
+
+        self.assertEqual(callback.call_count, 2)
 
 
 class ZeroMQMediumCloseTestCase(TestCase):

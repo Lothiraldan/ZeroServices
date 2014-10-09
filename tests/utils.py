@@ -90,6 +90,7 @@ class MemoryMedium(BaseMedium):
     def __init__(self, node_id):
         super(MemoryMedium, self).__init__(node_id)
         self.topics = []
+        self.callbacks = []
 
     def register(self):
         self.logger.info('Register %s', self.get_node_info())
@@ -133,9 +134,16 @@ class MemoryMedium(BaseMedium):
         try:
             service = SERVICES[peer_info['node_id']]
         except KeyError:
-            raise ServiceUnavailable('Service %s is unavailable.' % service_id)
+            raise ServiceUnavailable('Service %s is unavailable.' % peer_info['node_id'])
 
         return service.process_message(message, message_type)
+
+    def periodic_call(self, callback_time, callback):
+        self.callbacks.append(callback)
+
+    def call_callbacks(self):
+        for callback in self.callbacks:
+            callback()
 
 # Memory Collection
 

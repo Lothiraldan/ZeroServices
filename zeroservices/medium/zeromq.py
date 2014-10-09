@@ -15,6 +15,7 @@ from tornado import gen
 from os.path import join
 from os import makedirs
 from uuid import uuid4
+from tornado.ioloop import PeriodicCallback
 
 from zeroservices.medium import BaseMedium
 
@@ -304,3 +305,7 @@ class ZeroMQMedium(BaseMedium):
         self.sub.close()
         self.server.close()
         self.pub.close()
+
+    def periodic_call(self, callback, callback_time):
+        periodic = PeriodicCallback(callback, callback_time, self.ioloop)
+        periodic.start()

@@ -164,6 +164,9 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
     class WebSocketHandler(websocket.WebSocketHandler):
 
+        def check_origin(self, origin):
+            return True
+
         def open(self):
             self.application.clients.append(self)
             self.write_message('Test')

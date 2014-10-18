@@ -307,5 +307,6 @@ class ZeroMQMedium(BaseMedium):
         self.pub.close()
 
     def periodic_call(self, callback, callback_time):
-        periodic = PeriodicCallback(callback, callback_time, self.ioloop)
+        periodic = PeriodicCallback(callback, callback_time*1000, self.ioloop)
+        self.logger.info('Starting periodice callback on %s every %s ms', callback, callback_time*1000)
         periodic.start()

@@ -138,7 +138,7 @@ class MemoryMedium(BaseMedium):
 
         return service.process_message(message, message_type)
 
-    def periodic_call(self, callback_time, callback):
+    def periodic_call(self, callback, callback_time):
         self.callbacks.append(callback)
 
     def call_callbacks(self):

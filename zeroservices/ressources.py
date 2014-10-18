@@ -189,17 +189,18 @@ class RessourceWorker(BaseRessourceService):
         super(RessourceWorker, self).__init__(name, medium)
 
     def main(self):
+        self.medium.periodic_call(self.poll_check, 10)
         super(RessourceWorker, self).main()
-
-        self.medium.periodic_call(30, self.poll_check)
 
     def poll_check(self):
         # Ask about existing ressources matching rule
+        self.logger.info('Poll check starting')
         for ressource_type, rules in self.rules.items():
             for rule in rules:
                 matching_ressources = self.send(collection=ressource_type,
                                                 action="list",
                                                 where=rule.matcher)
+                self.logger.info('Rule %s, ressources %s', rule, matching_ressources)
                 for ressource in matching_ressources:
                     rule(ressource_type, ressource['ressource_data'],
                          ressource['ressource_id'], 'periodic')

@@ -215,6 +215,11 @@ class RessourceWorker(BaseRessourceService):
         action = message['action']
         ressource_id = message['ressource_id']
 
+        if not ressource_data and action != "delete":
+            ressource_data = self.send(collection=ressource_name,
+                                       action="get",
+                                       ressource_id=ressource_id)
+
         # See if one rule match
         for rule in self.rules.get(ressource_name, ()):
             if rule.match(ressource_data):

@@ -10,8 +10,7 @@ from base64 import b64decode
 from tornado import gen
 from tornado.web import URLSpec, RequestHandler, Application, HTTPError
 from tornado.options import parse_command_line
-from tornado import websocket
-
+from sockjs.tornado import SockJSRouter, SockJSConnection
 
 class AuthenticationError(HTTPError):
 
@@ -126,7 +125,6 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
                             })
 
 
-
     class MainHandler(BaseHandler):
         def get(self):
             self.write("Hello world from api")
@@ -162,30 +160,31 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
             self._process(collection, 'patch', ressource_id)
 
 
-    class WebSocketHandler(websocket.WebSocketHandler):
+    class SockJSHandler(SockJSConnection):
 
         def check_origin(self, origin):
             return True
 
-        def open(self):
-            self.application.clients.append(self)
-            self.write_message('Test')
+        def on_open(self, info):
+            self.session.handler.application.clients.append(self)
+            self.send('Test')
 
         def on_close(self):
-            self.application.clients.remove(self)
+            self.session.handler.application.clients.remove(self)
 
 
     # Urls
+    sockjs_router = SockJSRouter(SockJSHandler, '/realtime')
+
     urls = [
         URLSpec(r"/", MainHandler, name="main"),
-        URLSpec(r"/websocket/", WebSocketHandler, name="websocket"),
         URLSpec(r"/(?P<collection>[^\/]+)/$",
                 CollectionHandler, name="collection"),
         URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>.+)/$",
                 RessourceHandler, name="ressource")]
 
     # Application
-    application = Application(urls)
+    application = Application(sockjs_router.urls + urls)
 
     if bind:
         application.listen(port)

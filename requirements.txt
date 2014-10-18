@@ -7,3 +7,4 @@ requests
 responses
 nose
 six
+sockjs-tornado

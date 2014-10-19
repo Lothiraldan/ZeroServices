@@ -56,6 +56,9 @@ class MethodCaller(object):
         url = url_path_join(self.client.base_url, *self.client.parts)
         additionnal = self.client.preprocess_request()
 
+        # Reinitialize client part
+        self.client.parts = []
+
         if not self.method:
             self.method = 'post'
             additionnal.setdefault('headers', {})['X-CUSTOM-ACTION'] = self.action
@@ -63,7 +66,6 @@ class MethodCaller(object):
         response = getattr(requests, self.method)(url, data=json.dumps(kwargs),
                                                   **additionnal)
         response.raise_for_status()
-        self.client.parts = []
         if self.decode_json:
             return response.json()
         else:

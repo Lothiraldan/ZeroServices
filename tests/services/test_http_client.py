@@ -153,6 +153,27 @@ class BaseHttpClientTestCase(TestCase):
         with self.assertRaises(HTTPError):
             response = self.client[self.collection_name][self.ressource_id].get()
 
+    @responses.activate
+    def test_multiples_requests(self):
+        # First 404
+        responses.add(
+            responses.GET, self.ressource_url,
+            body="", status=404)
+
+        with self.assertRaises(HTTPError):
+            response = self.client[self.collection_name][self.ressource_id].get()
+
+        # Then list
+        expected_body = [self.ressource_body]
+
+        responses.add(
+            responses.GET, self.collection_url,
+            body=json.dumps(expected_body), status=200)
+
+        response = self.client[self.collection_name].list()
+
+        self.assertEquals(response, expected_body)
+
 
 class BasicAuthClientTestCase(TestCase):
 

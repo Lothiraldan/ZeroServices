@@ -49,8 +49,11 @@ class MongoDBRessource(Ressource):
 
     @is_callable
     def add_link(self, relation, target_id, title):
-        patch = {"$push": {"_links.%s" % relation:
-                    {"target_id": target_id, "title": title}}}
+        target_relation = target_id[0]
+        patch = {"$push": {"_links.{}".format(relation):
+                    {"target_id": target_id, "title": title}},
+                 "$set": {"_links.latest.{}".format(target_relation):
+                    target_id}}
         self.collection.find_and_modify({'_id': self.ressource_id}, patch,
                                         new=True)
 

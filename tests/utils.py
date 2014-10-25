@@ -189,9 +189,12 @@ class MemoryRessource(Ressource):
 
     @is_callable
     def add_link(self, relation, target_id, title):
+        target_relation = target_id[0]
         ressource = self.collection[self.ressource_id]
         links = ressource.setdefault('_links', {})
-        links[relation] = [{'target_id': target_id, 'title': title}]
+        links.setdefault(relation, []).append({'target_id': target_id,
+                                                 'title': title})
+        links.setdefault('latest', {})[target_relation] = target_id
         self.publish({'action': 'add_link', 'target_id': target_id,
                       'title': title})
         return 'OK'

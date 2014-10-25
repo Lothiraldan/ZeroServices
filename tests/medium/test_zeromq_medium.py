@@ -188,7 +188,7 @@ class ZeroMQMediumTestCase(TestCase):
 
         callback = Mock(side_effect=self.ioloop.stop)
 
-        self.service1.medium.periodic_call(callback, 2)
+        self.service1.medium.periodic_call(callback, 0.5)
 
         self.ioloop.call_later(1, self.ioloop.stop)
         self.ioloop.start()

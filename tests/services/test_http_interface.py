@@ -76,6 +76,17 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="list"))
 
+    def test_post_missing_custom_action_on_collection(self):
+        self.sentinel = [{'_id': '#1'}]
+        self.service.send.return_value = self.sentinel
+
+        # Include empty body just for the tests :(
+        result = self.fetch(self.url, method="POST", body='')
+        self.assertEqual(result.code, 405)
+
+        self.assertEqual(self.service.send.call_count, 0)
+
+
     def test_custom_action_on_collection(self):
         custom_action = 'custom_action'
         self.sentinel = [{'_id': '#1'}]
@@ -290,7 +301,7 @@ class HttpInterfaceWebsocketTestCase(HttpInterfaceTestCase):
     def setUp(self):
         super(HttpInterfaceWebsocketTestCase, self).setUp()
         self.ressource_id = "feature/test"
-        self.url = self.app.reverse_url("websocket")
+        self.url = "/realtime" # Fix reverse
 
     def get_protocol(self):
         return 'ws'

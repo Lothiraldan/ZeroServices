@@ -21,17 +21,13 @@ class RessourceWorkerUnitTestCase(TestCase):
 
         self.medium1 = MemoryMedium('node1')
         self.worker1 = RessourceWorker('worker1', self.medium1)
+        self.mock = Mock()
+        self.worker1.register(self.mock, 'ressource2')
 
     def test_no_rule(self):
-        self.worker1.on_event('unknown_ressource',
-                              {'ressource_name': 'unknown_ressource',
+        self.worker1.on_event('ressource1',
+                              {'ressource_name': 'ressource1',
                                'ressource_data': {},
-                               'ressource_id': 'doesn\'t matter',
-                               'action': 'create'})
-
-    def test_no_data(self):
-        self.worker1.on_event('unknown_ressource',
-                              {'ressource_name': 'unknown_ressource',
                                'ressource_id': 'doesn\'t matter',
                                'action': 'create'})
 
@@ -48,7 +44,7 @@ class RessourceWorkerTestCase(TestCase):
 
         self.medium2 = MemoryMedium('node2')
 
-        self.patch = {'kwarg_3': 3}
+        self.patch = {'kwarg_1': 42}
 
         class SampleWorker(RessourceWorker):
 
@@ -58,15 +54,16 @@ class RessourceWorkerTestCase(TestCase):
 
             def sample_job(self, ressource_name, ressource_data, ressource_id,
                            action):
-                if action == 'create' or action == 'periodic':
-                    self.send(collection=ressource_name, action="patch",
-                              ressource_id=ressource_id,
-                              patch={'$set': self.patch})
+                print "Here ?"
+                self.send(collection=ressource_name, action="patch",
+                          ressource_id=ressource_id,
+                          patch={'$set': self.patch})
 
         self.worker1 = SampleWorker('worker1', self.medium2, self.patch)
 
         self.callback = Mock()
-        self.worker1.register(self.worker1.sample_job, self.ressource_name)
+        self.worker1.register(self.worker1.sample_job, self.ressource_name,
+            kwarg_1=1)
 
     def tearDown(self):
         self.service1.close()
@@ -96,6 +93,38 @@ class RessourceWorkerTestCase(TestCase):
         query.update(message_args)
 
         self.collection1.on_message(**query)
+
+        expected_ressource = copy(ressource_data)
+        expected_ressource.update(self.patch)
+
+        updated_ressource_data = self.collection1.on_message(action='get',
+                ressource_id=ressource_id)['ressource_data']
+        self.assertEqual(
+            updated_ressource_data,
+            expected_ressource)
+
+    def test_no_data(self):
+        self.service1.main()
+
+        # Create the ressource
+
+        ressource_id = 'UUID1'
+        ressource_data = {'kwarg_1': 1, 'kwarg_2': 2, 'kwarg_4': 4}
+        message_args = {'ressource_data': ressource_data,
+                        'ressource_id': ressource_id}
+        query = {'action': 'create'}
+        query.update(message_args)
+
+        self.collection1.on_message(**query)
+
+        # Start the worker and send it a patch event
+        self.worker1.main()
+
+        self.worker1.on_event(self.ressource_name,
+                              {'ressource_name': self.ressource_name,
+                               'ressource_id': ressource_id,
+                               'action': 'patch',
+                               'patch': self.patch})
 
         expected_ressource = copy(ressource_data)
         expected_ressource.update(self.patch)

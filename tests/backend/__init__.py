@@ -21,6 +21,8 @@ class _BaseCollectionTestCase(TestCase):
         self.event_payload = {'ressource_id': self.ressource_id,
                               'ressource_name': self.ressource_name}
 
+        self.maxDiff = None
+
     def _create(self, ressource_data, ressource_id):
         message = {'action': 'create', 'ressource_id': ressource_id,
                    'ressource_data': ressource_data}
@@ -97,11 +99,12 @@ class _BaseCollectionTestCase(TestCase):
         self.service.publish.assert_called_once_with(self.ressource_name,
                                                      expected_payload)
 
+  # Add another link on same relation
     def test_add_link(self):
         self.test_create()
 
         relation = 'relation_type'
-        target_id = 'target'
+        target_id = ['collection', 'target']
         title = 'title'
         message = {'action': 'add_link', 'ressource_id': self.ressource_id,
                    'relation': relation, 'target_id': target_id,
@@ -109,10 +112,46 @@ class _BaseCollectionTestCase(TestCase):
         self.assertEqual(self.collection.on_message(**message),
                          "OK")
 
+        # Check that document is updated
         expected_data = self.ressource_data.copy()
         expected_data.update({'_links':
                              {relation: [{"target_id": target_id,
-                                          "title": title}]}})
+                                          "title": title}],
+                              'latest': {target_id[0]: target_id}}})
+        expected_document = {'ressource_id': self.ressource_id,
+                             'ressource_data': expected_data}
+
+
+        message = {'action': 'get', 'ressource_id': self.ressource_id}
+        self.assertEqual(self.collection.on_message(**message),
+                         expected_document)
+
+        # Check event payload
+        expected_payload = self.event_payload.copy()
+        expected_payload.update({'action': 'add_link', 'target_id': target_id,
+                                 'title': title})
+
+        self.service.publish.assert_called_once_with(self.ressource_name,
+                                                     expected_payload)
+
+        # Add another link on same relation
+        relation = 'relation_type'
+        target_id2 = ['collection', 'target2']
+        title2 = 'title2'
+        message = {'action': 'add_link', 'ressource_id': self.ressource_id,
+                   'relation': relation, 'target_id': target_id2,
+                   'title': title2}
+        self.assertEqual(self.collection.on_message(**message),
+                         "OK")
+
+        # Check that document is updated
+        expected_data = self.ressource_data.copy()
+        expected_data.update({'_links':
+                             {relation: [{"target_id": target_id,
+                                          "title": title},
+                                         {"target_id": target_id2,
+                                          "title": title2}],
+                              'latest': {target_id2[0]: target_id2}}})
         expected_document = {'ressource_id': self.ressource_id,
                              'ressource_data': expected_data}
 
@@ -120,12 +159,33 @@ class _BaseCollectionTestCase(TestCase):
         self.assertEqual(self.collection.on_message(**message),
                          expected_document)
 
-        expected_payload = self.event_payload.copy()
-        expected_payload.update({'action': 'add_link', 'target_id': target_id,
-                                 'title': title})
+        # Add a third link on another relation
+        relation2 = 'relation_type2'
+        target_id3 = ['foo', 'bar']
+        title3 = 'title3'
+        message = {'action': 'add_link', 'ressource_id': self.ressource_id,
+                   'relation': relation2, 'target_id': target_id3,
+                   'title': title3}
+        self.assertEqual(self.collection.on_message(**message),
+                         "OK")
 
-        self.service.publish.assert_called_once_with(self.ressource_name,
-                                                     expected_payload)
+        # Check that document is updated
+        expected_data = self.ressource_data.copy()
+        expected_data.update({'_links':
+                             {relation: [{"target_id": target_id,
+                                          "title": title},
+                                         {"target_id": target_id2,
+                                          "title": title2}],
+                              relation2: [{"target_id": target_id3,
+                                           "title": title3}],
+                              'latest': {target_id2[0]: target_id2,
+                                         target_id3[0]: target_id3}}})
+        expected_document = {'ressource_id': self.ressource_id,
+                             'ressource_data': expected_data}
+
+        message = {'action': 'get', 'ressource_id': self.ressource_id}
+        self.assertEqual(self.collection.on_message(**message),
+                         expected_document)
 
     def test_list(self):
         message = {'action': 'list'}

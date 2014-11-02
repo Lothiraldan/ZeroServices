@@ -34,14 +34,14 @@ class BaseRessourceService(BaseService):
         message.update({'collection': collection})
 
         if collection in self.ressources.keys():
-            return self.on_message(**message)
+            result = self.on_message(**message)
+        else:
+            try:
+                node_id = self.ressources_directory[collection]
+            except KeyError:
+                raise UnknownService("Unknown service {0}".format(collection))
 
-        try:
-            node_id = self.ressources_directory[collection]
-        except KeyError:
-            raise UnknownService("Unknown service {0}".format(collection))
-
-        result = super(BaseRessourceService, self).send(node_id, message)
+            result = super(BaseRessourceService, self).send(node_id, message)
 
         if result['success'] is False:
             raise RessourceException(result.pop("data"))

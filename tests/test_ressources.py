@@ -214,7 +214,7 @@ class RessourceServiceFakeCollectionTestCase(TestCase):
         self.collection.on_message.return_value = response
 
         self.assertEqual(self.service.send(**message),
-                         {'success': True, 'data': response})
+                         response)
 
         self.assertEqual(self.collection.on_message.call_count, 1)
         default_message_type = "message"

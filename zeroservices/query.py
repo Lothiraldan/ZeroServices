@@ -28,3 +28,22 @@ def query_incoming(caller, rel, ressource_id, outgoing_ressource_type,
         ressource_id = ressource['ressource_id']
         outgoing_ressource_type = ressource_type
     return ressource
+
+
+def follow_links(caller, first_ressource, *rels):
+    ressource = first_ressource
+    for rel in rels:
+        rel_links = ressource['_links']['latest'][rel]
+
+        caller.logger.info('Rel %s, outgoing ressource %s',
+            rel, rel_links)
+
+        ressource_type, ressource_id = rel_links
+
+        ressource = caller.send(collection=ressource_type, action='get',
+            ressource_id=ressource_id)['ressource_data']
+        caller.logger.info('Ressource %s', ressource)
+
+    return ressource
+
+

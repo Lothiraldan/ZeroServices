@@ -10,7 +10,8 @@ from base64 import b64decode
 from tornado import gen
 from tornado.web import URLSpec, RequestHandler, Application, HTTPError
 from tornado.options import parse_command_line
-from sockjs.tornado import SockJSRouter, SockJSConnection
+from sockjs.tornado import SockJSRouter
+from .sockjs_interface import SockJSHandler
 
 class AuthenticationError(HTTPError):
 
@@ -160,19 +161,6 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
             self._process(collection, 'patch', ressource_id)
 
 
-    class SockJSHandler(SockJSConnection):
-
-        def check_origin(self, origin):
-            return True
-
-        def on_open(self, info):
-            self.session.handler.application.clients.append(self)
-            self.send('Test')
-
-        def on_close(self):
-            self.session.handler.application.clients.remove(self)
-
-
     # Urls
     sockjs_router = SockJSRouter(SockJSHandler, '/realtime')
 
@@ -192,5 +180,6 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     parse_command_line()
     application.auth = auth
     application.clients = []
+    application.rooms = {}
 
     return application

@@ -17,7 +17,8 @@ class MongoDBRessource(Ressource):
         self.document_data.update(ressource_data)
         self.collection.insert(self.document_data)
 
-        self.publish({'action': 'create', 'ressource_data': ressource_data})
+        self.publish('create', {'action': 'create',
+                                'ressource_data': ressource_data})
 
         return {'ressource_id': self.ressource_id}
 
@@ -36,7 +37,7 @@ class MongoDBRessource(Ressource):
         new_document = self.collection.find_and_modify({'_id': self.ressource_id},
             patch, new=True)
 
-        self.publish({'action': 'patch', 'patch': patch})
+        self.publish('patch', {'action': 'patch', 'patch': patch})
 
         new_document.pop('_id')
         return new_document
@@ -44,7 +45,7 @@ class MongoDBRessource(Ressource):
     @is_callable
     def delete(self):
         self.collection.remove({'_id': self.ressource_id})
-        self.publish({'action': 'delete'})
+        self.publish('delete', {'action': 'delete'})
         return 'OK'
 
     @is_callable
@@ -57,8 +58,8 @@ class MongoDBRessource(Ressource):
         self.collection.find_and_modify({'_id': self.ressource_id}, patch,
                                         new=True)
 
-        self.publish({'action': 'add_link', 'target_id': target_id,
-            'title': title})
+        self.publish('add_link', {'action': 'add_link', 'target_id': target_id,
+            'title': title, 'relation': relation})
 
         return "OK"
 

@@ -3,6 +3,7 @@ import sys
 from zmq.eventloop import ioloop, zmqstream
 import zmq
 import logging
+import operator
 
 
 def extract_links(links, link_type):
@@ -32,3 +33,15 @@ def maybe_asynchronous(f):
         else:
             return result
     return wrapped
+
+
+def accumulate(iterable, func=operator.add):
+    'Return running totals'
+    # accumulate([1,2,3,4,5]) --> 1 3 6 10 15
+    # accumulate([1,2,3,4,5], operator.mul) --> 1 2 6 24 120
+    it = iter(iterable)
+    total = next(it)
+    yield total
+    for element in it:
+        total = func(total, element)
+        yield total

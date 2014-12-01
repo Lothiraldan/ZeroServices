@@ -352,14 +352,16 @@ class RessourceCollectionTestCase(TestCase):
         self.service.publish = publish_mock
 
         # Publish
-        self.collection.publish(publish_message)
+        publish_topic = 'publish_topic'
+        self.collection.publish(publish_topic, publish_message)
 
         # Check that collection added ressource_name to message
         publish_message = deepcopy(publish_message)
         publish_message.update({'ressource_name': self.ressource_name})
 
         self.assertEqual(publish_mock.call_args_list,
-            [call(self.ressource_name, publish_message)])
+            [call('.'.join([self.ressource_name, publish_topic]),
+                publish_message)])
 
 
 class RessourceWorkerTestCase(TestCase):
@@ -454,7 +456,8 @@ class RessourceTestCase(TestCase):
         self.service.publish = publish_mock
 
         instance = self.collection.instantiate(ressource_id=self.ressource_id)
-        instance.publish(publish_message)
+        publish_topic = 'publish_topic'
+        instance.publish(publish_topic, publish_message)
 
         # Check that collection added ressource_name to message
         # And that ressource added ressource_id to message
@@ -463,5 +466,6 @@ class RessourceTestCase(TestCase):
             'ressource_id': self.ressource_id})
 
         self.assertEqual(publish_mock.call_args_list,
-            [call(self.ressource_name, publish_message)])
+            [call('.'.join([self.ressource_name, publish_topic, self.ressource_id]),
+                publish_message)])
 

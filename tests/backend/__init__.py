@@ -39,7 +39,9 @@ class _BaseCollectionTestCase(TestCase):
         expected_payload.update({'action': 'create',
                                  'ressource_data': self.ressource_data})
 
-        self.service.publish.assert_called_once_with(self.ressource_name,
+        publish_topic = '.'.join([self.ressource_name, 'create', self.ressource_id])
+
+        self.service.publish.assert_called_once_with(publish_topic,
                                                      expected_payload)
 
         self.service.publish.reset_mock()
@@ -77,7 +79,9 @@ class _BaseCollectionTestCase(TestCase):
         expected_payload = self.event_payload.copy()
         expected_payload.update({'action': 'patch', 'patch': query})
 
-        self.service.publish.assert_called_once_with(self.ressource_name,
+        expected_topic = '.'.join([self.ressource_name, 'patch', self.ressource_id])
+
+        self.service.publish.assert_called_once_with(expected_topic,
                                                      expected_payload)
 
     def test_delete(self):
@@ -96,7 +100,9 @@ class _BaseCollectionTestCase(TestCase):
         expected_payload = self.event_payload.copy()
         expected_payload.update({'action': 'delete'})
 
-        self.service.publish.assert_called_once_with(self.ressource_name,
+        expected_topic = '.'.join([self.ressource_name, 'delete', self.ressource_id])
+
+        self.service.publish.assert_called_once_with(expected_topic,
                                                      expected_payload)
 
   # Add another link on same relation
@@ -129,9 +135,12 @@ class _BaseCollectionTestCase(TestCase):
         # Check event payload
         expected_payload = self.event_payload.copy()
         expected_payload.update({'action': 'add_link', 'target_id': target_id,
-                                 'title': title})
+                                 'title': title, 'relation': relation})
 
-        self.service.publish.assert_called_once_with(self.ressource_name,
+        expected_topic = '.'.join([self.ressource_name, 'add_link', self.ressource_id])
+
+
+        self.service.publish.assert_called_once_with(expected_topic,
                                                      expected_payload)
 
         # Add another link on same relation

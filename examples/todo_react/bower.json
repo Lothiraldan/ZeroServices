@@ -1,0 +1,23 @@
+{
+  "name": "smartforge",
+  "version": "0.0.0",
+  "homepage": "https://github.com/Lothiraldan/SmartForge",
+  "authors": [
+    "FELD Boris <lothiraldan@gmail.com>"
+  ],
+  "license": "Copyright",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.1",
+    "sockjs": "~0.3.4",
+    "sockjs_reconnect": "knowitnothing/sockjs_reconnect",
+    "react": "~0.12.0",
+  }
+}

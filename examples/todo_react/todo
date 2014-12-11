@@ -1,0 +1,5 @@
+CORS
+Access-Control-Allow-Origin
+OPTIONS
+on_event multi_room
+publish -> self.on_event

@@ -81,6 +81,13 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
     class BaseHandler(RequestHandler):
 
+        def check_origin(self, origin):
+            return True
+
+        def set_default_headers(self):
+            self.set_header("Access-Control-Allow-Origin", "*")
+            self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
+
         def prepare(self):
             ressource = self.path_kwargs.get("collection")
             auth.authorized(self, ressource, self.request.method)
@@ -92,7 +99,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
             try:
                 payload.update(json.loads(self.request.body.decode('utf-8')))
             except (ValueError, UnicodeDecodeError):
-                logger.exception('Bad body')
+                logger.exception('Bad body: %s', self.request.body.decode('utf-8'))
 
             payload.update({'collection': collection, 'action': action})
 
@@ -159,6 +166,9 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
 
         def patch(self, collection, ressource_id):
             self._process(collection, 'patch', ressource_id)
+
+        def options(self, collection, ressource_id):
+            pass
 
 
     # Urls

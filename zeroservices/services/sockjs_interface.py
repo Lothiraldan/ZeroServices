@@ -107,6 +107,7 @@ class DefaultSockJSHandler(SockJSConnection):
 class SockJSHandler(DefaultSockJSHandler):
 
     def on_join(self, data):
+        print "Join", data
         topic = data['topic']
         self.rooms.append(topic)
         self.join(topic)

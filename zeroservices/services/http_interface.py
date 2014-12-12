@@ -72,9 +72,13 @@ class BasicAuth(object):
             raise ForbiddenError()
 
 
-def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs={}, bind=True):
+def get_http_interface(service, port=8888, auth=None, auth_args=(),
+                       auth_kwargs={}, bind=True, allowed_origins=None):
 
     logger = logging.getLogger('api')
+
+    if allowed_origins is None:
+        allowed_origins = {}
 
     # Handlers
 
@@ -82,10 +86,11 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     class BaseHandler(RequestHandler):
 
         def check_origin(self, origin):
-            return True
+            return origin in self.application.allowed_origins
 
         def set_default_headers(self):
-            self.set_header("Access-Control-Allow-Origin", "*")
+            origins = ",".join(self.application.allowed_origins)
+            self.set_header("Access-Control-Allow-Origin", origins)
             self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
 
         def prepare(self):
@@ -191,5 +196,6 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     application.auth = auth
     application.clients = []
     application.rooms = {}
+    application.allowed_origins = allowed_origins
 
     return application

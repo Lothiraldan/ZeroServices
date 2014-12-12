@@ -32,7 +32,7 @@ class DefaultSockJSHandler(SockJSConnection):
     _parser = Parser()
 
     def check_origin(self, origin):
-        return True
+        return origin in self.session.handler.application.allowed_origins
 
     def __init__(self, session):
         super(DefaultSockJSHandler, self).__init__(session)

@@ -46,7 +46,7 @@ class TODOService(RessourceService):
 
 if __name__ == '__main__':
     todo = TODOService('todo_mvc', ZeroMQMedium(port_random=True))
-    application = get_http_interface(todo, port=5001, auth=Auth())
+    application = get_http_interface(todo, port=5001, auth=Auth(), allowed_origins="*")
     todo.register_ressource(MongoDBCollection("todo_list"))
     todo.register_ressource(MongoDBCollection("todo_item"))
     todo.main()

@@ -2,9 +2,9 @@ import requests
 import json
 
 try:
-    from urlparse import urljoin, urlsplit, urlunsplit
+    from urlparse import urlsplit, urlunsplit
 except ImportError:
-    from urllib.parse import urljoin, urlsplit, urlunsplit
+    from urllib.parse import urlsplit, urlunsplit
 
 
 def url_path_join(*parts):

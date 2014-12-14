@@ -1,13 +1,6 @@
-import sys
-import json
 import logging
-import traceback
-
-from copy import copy
-from tornado import gen
 
 from zeroservices.medium.zeromq import ZeroMQMedium
-from zeroservices.utils import maybe_asynchronous
 from zeroservices.exceptions import UnknownNode
 from zeroservices.validation import REGISTRATION_SCHEMA, MultipleInvalid
 

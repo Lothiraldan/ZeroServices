@@ -78,7 +78,8 @@ class DefaultSockJSHandler(SockJSConnection):
 
     def leave(self, _id):
         """ Leave a room """
-        self._get_room(topic).delete(self)
+        for topic in self.rooms:
+            self._get_room(topic).delete(self)
 
     def publishToRoom(self, topic, name, data, userList=None):
         """ Publish to given room data submitted """

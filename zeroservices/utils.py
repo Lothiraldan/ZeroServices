@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
-from zmq.eventloop import ioloop, zmqstream
-import zmq
-import logging
 import operator
 
 

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
 import zmq
 import time
 from zmq.eventloop import ioloop
@@ -10,11 +9,9 @@ import json
 import logging
 import socket
 
-from socket import gethostname, getaddrinfo, AF_INET, SOCK_STREAM, SOCK_DGRAM, IPPROTO_UDP, SOL_SOCKET, SO_REUSEADDR, IPPROTO_IP, IP_MULTICAST_TTL, IP_ADD_MEMBERSHIP, inet_aton
-from tornado import gen
+from socket import AF_INET, SOCK_STREAM, SOCK_DGRAM, IPPROTO_UDP, SOL_SOCKET, SO_REUSEADDR, IPPROTO_IP, IP_MULTICAST_TTL, IP_ADD_MEMBERSHIP, inet_aton
 from os.path import join
 from os import makedirs
-from uuid import uuid4
 from tornado.ioloop import PeriodicCallback
 
 from zeroservices.medium import BaseMedium

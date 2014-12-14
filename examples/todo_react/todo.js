@@ -1,7 +1,7 @@
 /** @jsx React.DOM */
 var TodoItem = React.createClass({
     componentDidMount: function() {
-        $.get("http://localhost:5001/todo_item/" + this.props.ressource_id + '/', function(result) {
+        $.get("http://localhost:5001/todo_item/" + this.props.resource_id + '/', function(result) {
           if (this.isMounted()) {
             this.setState(JSON.parse(result));
           }
@@ -10,7 +10,7 @@ var TodoItem = React.createClass({
 
     render: function() {
         return (
-          <li>{this.props.ressource_id}</li>
+          <li>{this.props.resource_id}</li>
         );
     }
 })
@@ -18,14 +18,14 @@ var TodoItem = React.createClass({
 var TodoList = React.createClass({
     handleSubmit: function(e) {
         e.preventDefault();
-        var new_item_name = this.refs[this.props.ressource_id + '_new_item_name'].getDOMNode().value.trim();
-        this.refs[this.props.ressource_id + '_new_item_name'].getDOMNode().value = '';
+        var new_item_name = this.refs[this.props.resource_id + '_new_item_name'].getDOMNode().value.trim();
+        this.refs[this.props.resource_id + '_new_item_name'].getDOMNode().value = '';
 
         // Create new item
         $.ajax({
             url: "http://localhost:5001/todo_item/" + new_item_name + "/",
             type: "POST",
-            data: JSON.stringify({"ressource_data": {}}),
+            data: JSON.stringify({"resource_data": {}}),
             dataType: "json",
             beforeSend: function(x) {
                 if (x && x.overrideMimeType) {
@@ -36,7 +36,7 @@ var TodoList = React.createClass({
 
         // Link it
         $.ajax({
-            url: "http://localhost:5001/todo_list/" + this.props.ressource_id + "/",
+            url: "http://localhost:5001/todo_list/" + this.props.resource_id + "/",
             type: "POST",
             headers: {
                 "X-CUSTOM-ACTION": "add_link",
@@ -52,18 +52,18 @@ var TodoList = React.createClass({
     },
 
     render: function() {
-        var links = this.props.ressource_data._links || {'children': []};
+        var links = this.props.resource_data._links || {'children': []};
 
         return (
           <div>
-            <h3>{this.props.ressource_id} list</h3>
+            <h3>{this.props.resource_id} list</h3>
             <ul>
                 {links.children.map(function(link) {
-                    return <TodoItem key={link.target_id[1]} ressource_id={link.target_id[1]} />
+                    return <TodoItem key={link.target_id[1]} resource_id={link.target_id[1]} />
                 })}
             </ul>
             <form onSubmit={this.handleSubmit}>
-              <input ref={this.props.ressource_id + '_new_item_name'}/>
+              <input ref={this.props.resource_id + '_new_item_name'}/>
               <button>{'Add #' + (links.children.length + 1)}</button>
             </form>
           </div>
@@ -85,7 +85,7 @@ var TodoApp = React.createClass({
         var lists = {};
         var result_lists = JSON.parse(result);
         for(i in result_lists) {
-          lists[result_lists[i].ressource_id] = result_lists[i];
+          lists[result_lists[i].resource_id] = result_lists[i];
         }
         this.setState({'lists': lists});
       }
@@ -99,7 +99,7 @@ var TodoApp = React.createClass({
     }
     else if(evt.data.action == 'add_link') {
         var lists = this.state.lists;
-        var resource = lists[evt.data.ressource_id].ressource_data;
+        var resource = lists[evt.data.resource_id].resource_data;
         if (resource._links == undefined) {
           resource._links = {};
         }
@@ -111,25 +111,25 @@ var TodoApp = React.createClass({
         this.setState({'lists': lists});
     }
     else if(evt.data.action == 'create') {
-        if(evt.data.ressource_name == 'todo_list') {
+        if(evt.data.resource_name == 'todo_list') {
             // Register to resource events
-            this.register_ressource_event(evt.data.ressource_id);
+            this.register_resource_event(evt.data.resource_id);
 
             // Add list
             var lists = this.state.lists;
-            lists[evt.data.ressource_id] = evt.data;
+            lists[evt.data.resource_id] = evt.data;
             this.setState({'lists': lists});
         }
     }
   },
 
-  register_ressource_event: function(ressource_id) {
+  register_resource_event: function(resource_id) {
     this.sock.send(JSON.stringify({'name': 'join', 'data':
-      {'topic': 'todo_list.add_link.' + ressource_id}}));
+      {'topic': 'todo_list.add_link.' + resource_id}}));
     this.sock.send(JSON.stringify({'name': 'join', 'data':
-      {'topic': 'todo_list.patch.' + ressource_id}}));
+      {'topic': 'todo_list.patch.' + resource_id}}));
     this.sock.send(JSON.stringify({'name': 'join', 'data':
-      {'topic': 'todo_list.delete.' + ressource_id}}));
+      {'topic': 'todo_list.delete.' + resource_id}}));
   },
 
   on_connect: function() {
@@ -138,7 +138,7 @@ var TodoApp = React.createClass({
 
     for(i in this.state.lists) {
       // Register to already retrieved resources events
-      this.register_ressource_event(this.state.lists[i].ressource_id);
+      this.register_resource_event(this.state.lists[i].resource_id);
     }
   },
 
@@ -149,7 +149,7 @@ var TodoApp = React.createClass({
     $.ajax({
         url: "http://localhost:5001/todo_list/" + new_list_name + "/",
         type: "POST",
-        data: JSON.stringify({"ressource_data": {}}),
+        data: JSON.stringify({"resource_data": {}}),
         dataType: "json",
         beforeSend: function(x) {
             if (x && x.overrideMimeType) {
@@ -164,7 +164,7 @@ var TodoApp = React.createClass({
     var lists = [];
     for(list_id in this.state.lists) {
       var list = this.state.lists[list_id];
-      lists.push(<TodoList key={list.ressource_id} ressource_id={list.ressource_id} ressource_data={list.ressource_data} />)
+      lists.push(<TodoList key={list.resource_id} resource_id={list.resource_id} resource_data={list.resource_data} />)
     }
 
     return (

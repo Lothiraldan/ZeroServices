@@ -6,8 +6,8 @@ except ImportError:
 from unittest import TestCase as unittestTestCase
 
 from zeroservices.exceptions import ServiceUnavailable
-from zeroservices.ressources import (RessourceCollection, Ressource,
-                                     is_callable, RessourceService)
+from zeroservices.resources import (ResourceCollection, Resource,
+                                     is_callable, ResourceService)
 from zeroservices.medium import BaseMedium
 from zeroservices import BaseService
 from zeroservices.query import match
@@ -30,29 +30,29 @@ class ServiceRegistry(object):
     SERVICES_RESSOURCES = {}
 
 
-def sample_collection(sample_ressource_name):
+def sample_collection(sample_resource_name):
 
-    collection = create_autospec(RessourceCollection, True)
-    collection.ressource_name = sample_ressource_name
+    collection = create_autospec(ResourceCollection, True)
+    collection.resource_name = sample_resource_name
 
     return collection
 
 
-def sample_ressource():
-    ressource_class = create_autospec(Ressource, True)
-    ressource_instance = create_autospec(Ressource, True, instance=True)
-    ressource_class.return_value = ressource_instance
-    return ressource_class, ressource_instance
+def sample_resource():
+    resource_class = create_autospec(Resource, True)
+    resource_instance = create_autospec(Resource, True, instance=True)
+    resource_class.return_value = resource_instance
+    return resource_class, resource_instance
 
 
 def sample_service():
-    service = create_autospec(RessourceService, True, instance=True)
+    service = create_autospec(ResourceService, True, instance=True)
     return service
 
 
-def base_ressource():
+def base_resource():
 
-    class BaseRessource(Ressource):
+    class BaseResource(Resource):
 
         def add_link(self):
             pass
@@ -69,7 +69,7 @@ def base_ressource():
         def patch(self):
             pass
 
-    return BaseRessource
+    return BaseResource
 
 
 class TestService(BaseService):

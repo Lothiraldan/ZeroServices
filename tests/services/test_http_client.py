@@ -18,17 +18,17 @@ class BaseHttpClientTestCase(TestCase):
 
         self.base_url = "http://localhost"
         self.collection_name = "collection"
-        self.ressource_id = "1"
-        self.ressource_body = {'_id': self.ressource_id, 'key': 'value'}
+        self.resource_id = "1"
+        self.resource_body = {'_id': self.resource_id, 'key': 'value'}
         self.client = BaseHTTPClient(self.base_url)
         self.app = get_http_interface(sentinel.SERVICE, bind=False)
 
         # URLS
         self.collection_url = self.base_url + \
             self.app.reverse_url("collection", self.collection_name)
-        self.ressource_url = self.base_url + \
-            self.app.reverse_url("ressource", self.collection_name,
-                self.ressource_id)
+        self.resource_url = self.base_url + \
+            self.app.reverse_url("resource", self.collection_name,
+                self.resource_id)
 
     def tearDown(self):
         sys.argv = self.old_argv
@@ -46,7 +46,7 @@ class BaseHttpClientTestCase(TestCase):
 
     @responses.activate
     def test_list_on_collection(self):
-        expected_body = [self.ressource_body]
+        expected_body = [self.resource_body]
 
         responses.add(
             responses.GET, self.collection_url,
@@ -58,7 +58,7 @@ class BaseHttpClientTestCase(TestCase):
 
     @responses.activate
     def test_custom_action_on_collection(self):
-        expected_body = [self.ressource_body]
+        expected_body = [self.resource_body]
 
         responses.add(
             responses.POST, self.collection_url,
@@ -73,55 +73,55 @@ class BaseHttpClientTestCase(TestCase):
             'custom_action')
 
     @responses.activate
-    def test_get_on_ressource(self):
-        expected_body = self.ressource_body
+    def test_get_on_resource(self):
+        expected_body = self.resource_body
 
         responses.add(
-            responses.GET, self.ressource_url,
+            responses.GET, self.resource_url,
             body=json.dumps(expected_body), status=200)
 
-        response = self.client[self.collection_name][self.ressource_id].get()
+        response = self.client[self.collection_name][self.resource_id].get()
 
         self.assertEquals(response, expected_body)
 
     @responses.activate
-    def test_post_on_ressource(self):
-        expected_body = {'_id': self.ressource_id}
+    def test_post_on_resource(self):
+        expected_body = {'_id': self.resource_id}
 
         responses.add(
-            responses.POST, self.ressource_url,
+            responses.POST, self.resource_url,
             body=json.dumps(expected_body), status=201)
 
-        response = self.client[self.collection_name][self.ressource_id].create(**self.ressource_body)
+        response = self.client[self.collection_name][self.resource_id].create(**self.resource_body)
 
         self.assertEquals(response, expected_body)
 
         self.assertEquals(len(responses.calls), 1)
         request_body = responses.calls[0].request.body
-        self.assertEquals(request_body, json.dumps(self.ressource_body))
+        self.assertEquals(request_body, json.dumps(self.resource_body))
 
     @responses.activate
-    def test_delete_on_ressource(self):
+    def test_delete_on_resource(self):
         expected_response = 'OK'
 
         responses.add(
-            responses.DELETE, self.ressource_url,
+            responses.DELETE, self.resource_url,
             body=json.dumps(expected_response), status=200)
 
-        response = self.client[self.collection_name][self.ressource_id].delete()
+        response = self.client[self.collection_name][self.resource_id].delete()
 
         self.assertEquals(response, expected_response)
 
     @responses.activate
-    def test_patch_on_ressource(self):
-        expected_response = {'_id': self.ressource_id, 'key': 'value2'}
+    def test_patch_on_resource(self):
+        expected_response = {'_id': self.resource_id, 'key': 'value2'}
         patch = {"$set": {"key": "value2"}}
 
         responses.add(
-            responses.PATCH, self.ressource_url,
+            responses.PATCH, self.resource_url,
             body=json.dumps(expected_response), status=200)
 
-        response = self.client[self.collection_name][self.ressource_id].patch(**patch)
+        response = self.client[self.collection_name][self.resource_id].patch(**patch)
 
         self.assertEquals(response, expected_response)
         self.assertEquals(len(responses.calls), 1)
@@ -129,14 +129,14 @@ class BaseHttpClientTestCase(TestCase):
         self.assertEquals(request_body, json.dumps(patch))
 
     @responses.activate
-    def test_custom_action_on_ressource(self):
-        expected_body = {'_id': self.ressource_id}
+    def test_custom_action_on_resource(self):
+        expected_body = {'_id': self.resource_id}
 
         responses.add(
-            responses.POST, self.ressource_url,
+            responses.POST, self.resource_url,
             body=json.dumps(expected_body), status=201)
 
-        response = self.client[self.collection_name][self.ressource_id].custom_action()
+        response = self.client[self.collection_name][self.resource_id].custom_action()
 
         self.assertEquals(response, expected_body)
         self.assertEquals(len(responses.calls), 1)
@@ -147,24 +147,24 @@ class BaseHttpClientTestCase(TestCase):
     @responses.activate
     def test_404(self):
         responses.add(
-            responses.GET, self.ressource_url,
+            responses.GET, self.resource_url,
             body="", status=404)
 
         with self.assertRaises(HTTPError):
-            response = self.client[self.collection_name][self.ressource_id].get()
+            response = self.client[self.collection_name][self.resource_id].get()
 
     @responses.activate
     def test_multiples_requests(self):
         # First 404
         responses.add(
-            responses.GET, self.ressource_url,
+            responses.GET, self.resource_url,
             body="", status=404)
 
         with self.assertRaises(HTTPError):
-            response = self.client[self.collection_name][self.ressource_id].get()
+            response = self.client[self.collection_name][self.resource_id].get()
 
         # Then list
-        expected_body = [self.ressource_body]
+        expected_body = [self.resource_body]
 
         responses.add(
             responses.GET, self.collection_url,
@@ -183,8 +183,8 @@ class BasicAuthClientTestCase(TestCase):
 
         self.base_url = "http://localhost"
         self.collection_name = "collection"
-        self.ressource_id = "1"
-        self.ressource_body = {'_id': self.ressource_id, 'key': 'value'}
+        self.resource_id = "1"
+        self.resource_body = {'_id': self.resource_id, 'key': 'value'}
         self.auth_tuple = ('login', 'password')
         self.client = BasicAuthHTTPClient(self.base_url, self.auth_tuple)
         self.app = get_http_interface(sentinel.SERVICE, bind=False)
@@ -192,9 +192,9 @@ class BasicAuthClientTestCase(TestCase):
         # URLS
         self.collection_url = self.base_url + \
             self.app.reverse_url("collection", self.collection_name)
-        self.ressource_url = self.base_url + \
-            self.app.reverse_url("ressource", self.collection_name,
-                self.ressource_id)
+        self.resource_url = self.base_url + \
+            self.app.reverse_url("resource", self.collection_name,
+                self.resource_id)
 
 
     def tearDown(self):
@@ -222,7 +222,7 @@ class BasicAuthClientTestCase(TestCase):
 
     @responses.activate
     def test_list_on_collection(self):
-        expected_body = [self.ressource_body]
+        expected_body = [self.resource_body]
 
         responses.add(
             responses.GET, self.collection_url,

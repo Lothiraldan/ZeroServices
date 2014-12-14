@@ -7,7 +7,7 @@ class UnknownNode(Exception):
 class UnknownService(Exception):
     pass
 
-class RessourceException(Exception):
+class ResourceException(Exception):
 
     def __init__(self, error_message):
         self.error_message = error_message
@@ -16,7 +16,7 @@ class RessourceException(Exception):
         return self.__repr__()
 
     def __repr__(self):
-        return "RessourceException(%s)" % self.error_message
+        return "ResourceException(%s)" % self.error_message
 
-class RessourceNotFound(Exception):
+class ResourceNotFound(Exception):
     pass

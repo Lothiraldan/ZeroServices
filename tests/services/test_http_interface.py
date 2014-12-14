@@ -3,7 +3,7 @@ import sys
 
 from base64 import b64encode
 from zeroservices.services import get_http_interface, BasicAuth
-from zeroservices.ressources import RessourceService
+from zeroservices.resources import ResourceService
 from tornado.testing import AsyncHTTPTestCase
 from tornado.websocket import websocket_connect, WebSocketClientConnection
 
@@ -15,7 +15,7 @@ except ImportError:
 
 class TestAuth(BasicAuth):
 
-    def authorized(self, handler, ressource, method):
+    def authorized(self, handler, resource, method):
         return True
 
 
@@ -32,7 +32,7 @@ class TestBasicAuth(BasicAuth):
 class HttpInterfaceTestCase(AsyncHTTPTestCase):
 
     def setUp(self):
-        self.service = create_autospec(RessourceService, True, instance=True)
+        self.service = create_autospec(ResourceService, True, instance=True)
         self.collection_name = "test_collection"
         self.old_argv = sys.argv
         sys.argv = []
@@ -102,18 +102,18 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
             call(collection=self.collection_name, action=custom_action))
 
 
-class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
+class HttpInterfaceResourceTestCase(HttpInterfaceTestCase):
 
     def setUp(self):
-        super(HttpInterfaceRessourceTestCase, self).setUp()
-        self.ressource_id = "1"
-        self.url = self.app.reverse_url("ressource", self.collection_name,
-            self.ressource_id)
+        super(HttpInterfaceResourceTestCase, self).setUp()
+        self.resource_id = "1"
+        self.url = self.app.reverse_url("resource", self.collection_name,
+            self.resource_id)
         self.args = {'arg1': 'value1', 'arg2': 'value2'}
         self.body = json.dumps(self.args)
 
-    def test_get_on_ressource(self):
-        self.sentinel = {'_id': self.ressource_id}
+    def test_get_on_resource(self):
+        self.sentinel = {'_id': self.resource_id}
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url)
@@ -123,10 +123,10 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="get",
-                 ressource_id=self.ressource_id))
+                 resource_id=self.resource_id))
 
-    def test_post_on_ressource(self):
-        self.sentinel = {'_id': self.ressource_id}
+    def test_post_on_resource(self):
+        self.sentinel = {'_id': self.resource_id}
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url, method="POST", body=self.body)
@@ -136,9 +136,9 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="create",
-                 ressource_id=self.ressource_id, **self.args))
+                 resource_id=self.resource_id, **self.args))
 
-    def test_delete_on_ressource(self):
+    def test_delete_on_resource(self):
         self.sentinel = "OK"
         self.service.send.return_value = self.sentinel
 
@@ -149,9 +149,9 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="delete",
-                 ressource_id=self.ressource_id))
+                 resource_id=self.resource_id))
 
-    def test_patch_on_ressource(self):
+    def test_patch_on_resource(self):
         self.sentinel = {'_id': '#1'}
         self.service.send.return_value = self.sentinel
 
@@ -162,9 +162,9 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="patch",
-                 ressource_id=self.ressource_id, **self.args))
+                 resource_id=self.resource_id, **self.args))
 
-    def test_custom_action_on_ressource(self):
+    def test_custom_action_on_resource(self):
         custom_action = 'custom_action'
         self.sentinel = {'_id': '#1'}
         self.service.send.return_value = self.sentinel
@@ -177,20 +177,20 @@ class HttpInterfaceRessourceTestCase(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name,
-                 ressource_id=self.ressource_id,  action=custom_action,
+                 resource_id=self.resource_id,  action=custom_action,
                  **self.args))
 
 
-class HttpInterfaceRessourceIdSlash(HttpInterfaceTestCase):
+class HttpInterfaceResourceIdSlash(HttpInterfaceTestCase):
 
     def setUp(self):
-        super(HttpInterfaceRessourceIdSlash, self).setUp()
-        self.ressource_id = "feature/test"
-        self.url = self.app.reverse_url("ressource", self.collection_name,
-            self.ressource_id)
+        super(HttpInterfaceResourceIdSlash, self).setUp()
+        self.resource_id = "feature/test"
+        self.url = self.app.reverse_url("resource", self.collection_name,
+            self.resource_id)
 
     def test_get(self):
-        self.sentinel = {'_id': self.ressource_id}
+        self.sentinel = {'_id': self.resource_id}
         self.service.send.return_value = self.sentinel
 
         result = self.fetch(self.url)
@@ -200,7 +200,7 @@ class HttpInterfaceRessourceIdSlash(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="get",
-                 ressource_id=self.ressource_id))
+                 resource_id=self.resource_id))
 
 
 
@@ -300,7 +300,7 @@ class HttpInterfaceWebsocketTestCase(HttpInterfaceTestCase):
 
     def setUp(self):
         super(HttpInterfaceWebsocketTestCase, self).setUp()
-        self.ressource_id = "feature/test"
+        self.resource_id = "feature/test"
         self.url = "/realtime" # Fix reverse
 
     def get_protocol(self):

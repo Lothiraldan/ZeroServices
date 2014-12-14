@@ -1,3 +1,3 @@
 from .service import BaseService
-from .ressources import *
+from .resources import *
 from .medium import *

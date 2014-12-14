@@ -1,9 +1,9 @@
 import pymongo
 
-from zeroservices import RessourceService, ZeroMQMedium
-from zeroservices.backend.mongodb import MongoDBCollection, MongoDBRessource
+from zeroservices import ResourceService, ZeroMQMedium
+from zeroservices.backend.mongodb import MongoDBCollection, MongoDBResource
 from zeroservices.memory import MemoryCollection, MemoryCollection
-from zeroservices.ressources import is_callable
+from zeroservices.resources import is_callable
 
 import sys
 from zmq.eventloop import ioloop, zmqstream
@@ -18,7 +18,7 @@ from tornado import gen
 from tornado import web
 from tornado import websocket
 
-from zeroservices import RessourceService, ZeroMQMedium
+from zeroservices import ResourceService, ZeroMQMedium
 from zeroservices.services import get_http_interface, BasicAuth
 
 from zeroservices.utils import accumulate
@@ -33,7 +33,7 @@ class Auth(object):
 
 
 # APP
-class TODOService(RessourceService):
+class TODOService(ResourceService):
 
     def on_event(self, message_type, data):
         self.logger.info("On event %s", locals())
@@ -48,6 +48,6 @@ class TODOService(RessourceService):
 if __name__ == '__main__':
     todo = TODOService('todo_mvc', ZeroMQMedium(port_random=True))
     application = get_http_interface(todo, port=5001, auth=Auth(), allowed_origins="*")
-    todo.register_ressource(MongoDBCollection("todo_list"))
-    todo.register_ressource(MongoDBCollection("todo_item"))
+    todo.register_resource(MongoDBCollection("todo_list"))
+    todo.register_resource(MongoDBCollection("todo_item"))
     todo.main()

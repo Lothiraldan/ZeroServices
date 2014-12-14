@@ -14,5 +14,5 @@ class MemoryCollectionTestCase(_BaseCollectionTestCase):
 
     def setUp(self):
         super(MemoryCollectionTestCase, self).setUp()
-        self.collection = MemoryCollection(self.ressource_name)
+        self.collection = MemoryCollection(self.resource_name)
         self.collection.service = self.service

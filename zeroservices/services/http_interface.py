@@ -44,7 +44,7 @@ class BasicAuth(object):
         """
         raise NotImplementedError
 
-    def authorized(self, handler, ressource, method):
+    def authorized(self, handler, resource, method):
         """ Validates the the current request is allowed to pass through.
 
         :param resource: resource being requested.
@@ -62,7 +62,7 @@ class BasicAuth(object):
             raise AuthenticationError()
 
 
-        if self.check_auth(username, password, ressource, method):
+        if self.check_auth(username, password, resource, method):
             return True
         else:
             raise ForbiddenError()
@@ -90,10 +90,10 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
             self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
 
         def prepare(self):
-            ressource = self.path_kwargs.get("collection")
-            auth.authorized(self, ressource, self.request.method)
+            resource = self.path_kwargs.get("collection")
+            auth.authorized(self, resource, self.request.method)
 
-        def _process(self, collection, action, ressource_id=None):
+        def _process(self, collection, action, resource_id=None):
 
             payload = {}
 
@@ -104,8 +104,8 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
 
             payload.update({'collection': collection, 'action': action})
 
-            if ressource_id:
-                payload['ressource_id'] = ressource_id
+            if resource_id:
+                payload['resource_id'] = resource_id
 
             logger.info('Payload %s' % payload)
 
@@ -153,22 +153,22 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
             self._process(collection, custom_action)
 
 
-    class RessourceHandler(BaseHandler):
+    class ResourceHandler(BaseHandler):
 
-        def get(self, collection, ressource_id):
-            self._process(collection, 'get', ressource_id)
+        def get(self, collection, resource_id):
+            self._process(collection, 'get', resource_id)
 
-        def post(self, collection, ressource_id):
+        def post(self, collection, resource_id):
             custom_action = self.request.headers.get('X-CUSTOM-ACTION')
-            self._process(collection, custom_action or 'create', ressource_id)
+            self._process(collection, custom_action or 'create', resource_id)
 
-        def delete(self, collection, ressource_id):
-            self._process(collection, 'delete', ressource_id)
+        def delete(self, collection, resource_id):
+            self._process(collection, 'delete', resource_id)
 
-        def patch(self, collection, ressource_id):
-            self._process(collection, 'patch', ressource_id)
+        def patch(self, collection, resource_id):
+            self._process(collection, 'patch', resource_id)
 
-        def options(self, collection, ressource_id):
+        def options(self, collection, resource_id):
             pass
 
 
@@ -179,8 +179,8 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
         URLSpec(r"/", MainHandler, name="main"),
         URLSpec(r"/(?P<collection>[^\/]+)/$",
                 CollectionHandler, name="collection"),
-        URLSpec(r"/(?P<collection>[^\/]+)/(?P<ressource_id>.+)/$",
-                RessourceHandler, name="ressource")]
+        URLSpec(r"/(?P<collection>[^\/]+)/(?P<resource_id>.+)/$",
+                ResourceHandler, name="resource")]
 
     # Application
     application = Application(sockjs_router.urls + urls)

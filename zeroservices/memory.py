@@ -1,5 +1,5 @@
 from .medium import BaseMedium
-from .ressources import (RessourceCollection, Ressource,
+from .resources import (ResourceCollection, Resource,
                          is_callable)
 from .exceptions import ServiceUnavailable
 from .query import match
@@ -74,50 +74,50 @@ class MemoryMedium(BaseMedium):
 # Memory Collection
 
 
-class MemoryRessource(Ressource):
+class MemoryResource(Resource):
 
     def __init__(self, collection, **kwargs):
-        super(MemoryRessource, self).__init__(**kwargs)
+        super(MemoryResource, self).__init__(**kwargs)
         self.collection = collection
 
     @is_callable
-    def create(self, ressource_data):
-        self.collection[self.ressource_id] = ressource_data
-        self.publish('create', {'action': 'create', 'ressource_data': ressource_data})
-        return {'ressource_id': self.ressource_id}
+    def create(self, resource_data):
+        self.collection[self.resource_id] = resource_data
+        self.publish('create', {'action': 'create', 'resource_data': resource_data})
+        return {'resource_id': self.resource_id}
 
     @is_callable
     def get(self):
         try:
-            ressource = {'ressource_id': self.ressource_id,
-                         'ressource_data': self.collection[self.ressource_id]}
+            resource = {'resource_id': self.resource_id,
+                         'resource_data': self.collection[self.resource_id]}
         except KeyError:
             return 'NOK'
-        return ressource
+        return resource
 
     @is_callable
     def patch(self, patch):
-        ressource = self.collection[self.ressource_id]
+        resource = self.collection[self.resource_id]
 
         set_keys = patch['$set']
         for key, value in set_keys.items():
-            ressource[key] = value
+            resource[key] = value
 
         self.publish('patch', {'action': 'patch', 'patch': patch})
 
-        return ressource
+        return resource
 
     @is_callable
     def delete(self):
-        del self.collection[self.ressource_id]
+        del self.collection[self.resource_id]
         self.publish('delete', {'action': 'delete'})
         return 'OK'
 
     @is_callable
     def add_link(self, relation, target_id, title):
         target_relation = target_id[0]
-        ressource = self.collection[self.ressource_id]
-        links = ressource.setdefault('_links', {})
+        resource = self.collection[self.resource_id]
+        links = resource.setdefault('_links', {})
         links.setdefault(relation, []).append({'target_id': target_id,
                                                  'title': title})
         links.setdefault('latest', {})[target_relation] = target_id
@@ -126,10 +126,10 @@ class MemoryRessource(Ressource):
         return 'OK'
 
 
-class MemoryCollection(RessourceCollection):
+class MemoryCollection(ResourceCollection):
 
     def __init__(self, collection_name):
-        super(MemoryCollection, self).__init__(MemoryRessource, collection_name)
+        super(MemoryCollection, self).__init__(MemoryResource, collection_name)
         self._collection = {}
 
     def instantiate(self, **kwargs):
@@ -138,15 +138,15 @@ class MemoryCollection(RessourceCollection):
 
     @is_callable
     def list(self, where=None):
-        ressources = []
-        for ressource_id, ressource_data in self._collection.items():
+        resources = []
+        for resource_id, resource_data in self._collection.items():
 
             # Filtering happens here
             if where:
-                if not match(where, ressource_data):
+                if not match(where, resource_data):
                     continue
 
-            ressources.append({'ressource_id': ressource_id,
-                               'ressource_data': ressource_data})
+            resources.append({'resource_id': resource_id,
+                               'resource_data': resource_data})
 
-        return ressources
+        return resources

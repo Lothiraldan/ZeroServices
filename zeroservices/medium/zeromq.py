@@ -231,7 +231,7 @@ class ZeroMQMedium(BaseMedium):
         self.process_message(registraton_message, 'register')
         # if self.save_register_info(data):
         #     self.register_to(data)
-        # self.logger.info('Self ressources map: %s' % self.services_ressources)
+        # self.logger.info('Self resources map: %s' % self.services_resources)
 
     def send_registration_answer(self, peer_info):
         node_info = self.get_node_info()

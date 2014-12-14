@@ -2,7 +2,7 @@ import pymongo
 
 from zeroservices import RessourceService, ZeroMQMedium
 from zeroservices.backend.mongodb import MongoDBCollection, MongoDBRessource
-from zeroservices.utils import MemoryCollection, MemoryCollection
+from zeroservices.memory import MemoryCollection, MemoryCollection
 from zeroservices.ressources import is_callable
 
 import sys

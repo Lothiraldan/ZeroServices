@@ -18,7 +18,7 @@ class MongoDBRessource(Ressource):
         self.collection.insert(document_data)
 
         self.publish('create', {'action': 'create',
-                                'ressource_data': document_data})
+                                'ressource_data': ressource_data})
 
         return {'ressource_id': self.ressource_id}
 

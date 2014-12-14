@@ -1,15 +1,4 @@
 /** @jsx React.DOM */
-var TodoList = React.createClass({
-  createItem: function(itemText) {
-      return <li>{itemText} [<a href="#" onClick={this.props.handleDelete.bind(this, itemText)}>x</a>]</li>;
-  },
-
-  render: function() {
-    return <ul>{this.props.items.map(this.createItem)}</ul>;
-  }
-});
-
-
 var TodoItem = React.createClass({
     componentDidMount: function() {
         $.get("http://localhost:5001/todo_item/" + this.props.ressource_id + '/', function(result) {
@@ -30,7 +19,6 @@ var TodoList = React.createClass({
     handleSubmit: function(e) {
         e.preventDefault();
         var new_item_name = this.refs[this.props.ressource_id + '_new_item_name'].getDOMNode().value.trim();
-        console.log(new_item_name);
         this.refs[this.props.ressource_id + '_new_item_name'].getDOMNode().value = '';
 
         // Create new item
@@ -149,7 +137,7 @@ var TodoApp = React.createClass({
         {'topic': 'todo_list.create'}}));
 
     for(i in this.state.lists) {
-      // Register to resources events
+      // Register to already retrieved resources events
       this.register_ressource_event(this.state.lists[i].ressource_id);
     }
   },

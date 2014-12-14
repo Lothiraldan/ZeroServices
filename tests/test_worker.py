@@ -5,9 +5,9 @@ except ImportError:
 
 from copy import copy
 from zeroservices import RessourceService, RessourceCollection, RessourceWorker
-from .utils import test_medium, MemoryCollection
-from .utils import MemoryMedium, TestService, TestCase
-from .utils import test_medium, sample_collection, sample_ressource, base_ressource
+from zeroservices.memory import MemoryMedium, MemoryCollection
+from .utils import (test_medium, sample_collection, sample_ressource,
+    base_ressource, TestCase, TestService)
 
 
 class RuleTestCase(TestCase):

@@ -13,9 +13,9 @@ class MongoDBRessource(Ressource):
 
     @is_callable
     def create(self, ressource_data):
-        self.document_data = {'_id': self.ressource_id}
-        self.document_data.update(ressource_data)
-        self.collection.insert(self.document_data)
+        document_data = {'_id': self.ressource_id}
+        document_data.update(ressource_data)
+        self.collection.insert(document_data)
 
         self.publish('create', {'action': 'create',
                                 'ressource_data': ressource_data})

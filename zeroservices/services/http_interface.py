@@ -72,14 +72,26 @@ class BasicAuth(object):
             raise ForbiddenError()
 
 
-def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs={}, bind=True):
+def get_http_interface(service, port=8888, auth=None, auth_args=(),
+                       auth_kwargs={}, bind=True, allowed_origins=None):
 
     logger = logging.getLogger('api')
+
+    if allowed_origins is None:
+        allowed_origins = {}
 
     # Handlers
 
 
     class BaseHandler(RequestHandler):
+
+        def check_origin(self, origin):
+            return origin in self.application.allowed_origins
+
+        def set_default_headers(self):
+            origins = ",".join(self.application.allowed_origins)
+            self.set_header("Access-Control-Allow-Origin", origins)
+            self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
 
         def prepare(self):
             ressource = self.path_kwargs.get("collection")
@@ -92,7 +104,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
             try:
                 payload.update(json.loads(self.request.body.decode('utf-8')))
             except (ValueError, UnicodeDecodeError):
-                logger.exception('Bad body')
+                logger.exception('Bad body: %s', self.request.body.decode('utf-8'))
 
             payload.update({'collection': collection, 'action': action})
 
@@ -160,6 +172,9 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
         def patch(self, collection, ressource_id):
             self._process(collection, 'patch', ressource_id)
 
+        def options(self, collection, ressource_id):
+            pass
+
 
     # Urls
     sockjs_router = SockJSRouter(SockJSHandler, '/realtime')
@@ -181,5 +196,6 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(), auth_kwargs=
     application.auth = auth
     application.clients = []
     application.rooms = {}
+    application.allowed_origins = allowed_origins
 
     return application

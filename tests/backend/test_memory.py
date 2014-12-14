@@ -1,6 +1,7 @@
 import unittest
 
-from ..utils import test_medium, MemoryCollection
+from zeroservices.memory import MemoryCollection
+from ..utils import test_medium
 from . import _BaseCollectionTestCase
 
 try:

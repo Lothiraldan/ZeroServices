@@ -3,7 +3,8 @@ try:
 except ImportError:
     from mock import call
 
-from .utils import MemoryMedium, TestService, TestCase
+from zeroservices.memory import MemoryMedium
+from .utils import TestService, TestCase
 
 
 class MemoryMediumCommunicationTestCase(TestCase):

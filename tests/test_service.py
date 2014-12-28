@@ -3,9 +3,9 @@ from zeroservices.exceptions import UnknownNode
 from .utils import test_medium, TestCase
 
 try:
-    from unittest.mock import Mock, call
+    from unittest.mock import Mock, patch, call
 except ImportError:
-    from mock import Mock, call
+    from mock import Mock, patch, call
 
 
 class BaseServiceTestCase(TestCase):
@@ -76,6 +76,21 @@ class BaseServiceTestCase(TestCase):
         self.assertEqual(self.medium.send.call_count, 1)
         mock_call = self.medium.send.call_args
         self.assertEqual(mock_call, call(self.node_info, message))
+
+    def test_publish(self):
+        # Set response on zeromq mock
+        resource_name = 'ABC'
+
+        publish_message = {'type': 'new', '_id': 'foo',
+             'resource_data': 'bar', 'resource_name': resource_name}
+        topic = '{}.{}'.format(resource_name, 'action')
+
+        # Check that BaseService didn't call on_event on publish
+        with patch.object(self.service, 'on_event') as mock:
+            self.service.publish(topic, publish_message)
+
+        self.assertEqual(mock.call_count, 0)
+
 
     def test_send_unknown_node(self):
         message = {'content': 'Coucou'}

@@ -84,9 +84,6 @@ class BaseService(object):
     def publish(self, *args):
         self.medium.publish(*args)
 
-        # Publish to itself
-        self.on_event(*args)
-
     def main(self):
         self.medium.register()
         self.medium.start()

@@ -89,6 +89,14 @@ class ResourceService(BaseResourceService):
             self.logger.debug("Success: {0}".format(result))
             return {'success': True, 'data': result}
 
+    def publish(self, *args):
+        '''Call BaseService.publish and call on_event on self.
+        '''
+        super(ResourceService, self).publish(*args)
+
+        # Publish to itself
+        self.on_event(*args)
+
     ### Utils
     def register_resource(self, collection):
         assert isinstance(collection, ResourceCollection)

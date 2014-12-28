@@ -147,6 +147,19 @@ class ResourceServiceTestCase(TestCase):
         with self.assertRaises(UnknownService):
             self.service.send(**call_request)
 
+    def test_resource_publish_to_itself(self):
+        resource_name = 'ABC'
+
+        publish_message = {'type': 'new', '_id': 'foo',
+             'resource_data': 'bar', 'resource_name': resource_name}
+        topic = '{}.{}'.format(resource_name, 'action')
+
+        with patch.object(self.service, 'on_event') as mocked_on_event:
+            self.service.publish(topic, publish_message)
+
+        self.assertEquals(mocked_on_event.call_args_list,
+                          [call(topic, publish_message)])
+
 
 class ResourceServiceFakeCollectionTestCase(TestCase):
 

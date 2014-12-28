@@ -87,7 +87,9 @@ class WebSocketHandler(websocket.WebSocketHandler):
             s.publish(str(message['type']), msg)
         elif message['type'] == 'direct_message':
             msg = {'from': sys.argv[1], 'message': message['data']['message']}
-            s.send(message['data']['to'], msg, msg_type=str(message['type']))
+            s.send(message['data']['to'], msg,
+                   message_type=str(message['type']),
+                   wait_response=False)
 
 urls = [
     (r"/", MainHandler),

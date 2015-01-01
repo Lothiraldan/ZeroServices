@@ -71,6 +71,7 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
 
         result = self.fetch(self.url)
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
@@ -96,6 +97,7 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
         result = self.fetch(self.url, method="POST", body='',
                             headers={'X-CUSTOM-ACTION': 'custom_action'})
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
@@ -118,6 +120,7 @@ class HttpInterfaceResourceTestCase(HttpInterfaceTestCase):
 
         result = self.fetch(self.url)
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')),
                          self.sentinel)
 
@@ -131,6 +134,7 @@ class HttpInterfaceResourceTestCase(HttpInterfaceTestCase):
 
         result = self.fetch(self.url, method="POST", body=self.body)
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')),
                          self.sentinel)
 
@@ -144,6 +148,7 @@ class HttpInterfaceResourceTestCase(HttpInterfaceTestCase):
 
         result = self.fetch(self.url, method="DELETE")
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')),
                          self.sentinel)
 
@@ -157,6 +162,7 @@ class HttpInterfaceResourceTestCase(HttpInterfaceTestCase):
 
         result = self.fetch(self.url, method="PATCH", body=self.body)
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')),
                          self.sentinel)
 
@@ -173,6 +179,7 @@ class HttpInterfaceResourceTestCase(HttpInterfaceTestCase):
                             headers={'X-CUSTOM-ACTION': 'custom_action'},
                             body=self.body)
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')), self.sentinel)
 
         self.assertEqual(self.service.send.call_args,
@@ -195,6 +202,7 @@ class HttpInterfaceResourceIdSlash(HttpInterfaceTestCase):
 
         result = self.fetch(self.url)
         self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
         self.assertEqual(json.loads(result.body.decode('utf-8')),
                          self.sentinel)
 

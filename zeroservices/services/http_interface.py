@@ -112,6 +112,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
             result = service.send(**payload)
             logger.info('Result is %s' % result)
 
+            self.set_header("Content-Type", "application/json")
             self.write(json.dumps(result))
             self.finish()
 

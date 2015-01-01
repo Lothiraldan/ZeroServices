@@ -7,5 +7,6 @@ setup(name='ZeroServices',
       description='ZeroServices',
       author='FELD Boris',
       author_email='lothiraldan@gmail.com',
-      packages=['zeroservices', 'zeroservices.medium'],
+      packages=['zeroservices', 'zeroservices.medium',
+                'zeroservices.backend', 'zeroservices.services'],
      )

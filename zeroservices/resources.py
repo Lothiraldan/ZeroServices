@@ -1,6 +1,7 @@
 from .service import BaseService
 from .exceptions import UnknownService, ResourceException
 from .query import match
+from .utils import accumulate
 from abc import ABCMeta, abstractmethod
 from uuid import uuid4
 
@@ -110,6 +111,21 @@ class ResourceService(BaseResourceService):
     def get_known_worker_nodes(self):
         return {resource_type: list(workers.keys()) for resource_type, workers in
                 self.resources_worker_directory.items()}
+
+
+class RealtimeResourceService(ResourceService):
+    '''A subclass resource service compatible with realtime sockjs http
+    interface.
+    '''
+
+    def on_event(self, message_type, data):
+        self.logger.info("On event %s", locals())
+        self.application.clients[0].publishToRoom('*', 'event', data)
+
+        topics = accumulate(message_type.split('.'), lambda x, y: '.'.join((x, y)))
+
+        for topic in topics:
+            self.application.clients[0].publishToRoom(topic, 'event', data)
 
 
 class ResourceCollection(object):

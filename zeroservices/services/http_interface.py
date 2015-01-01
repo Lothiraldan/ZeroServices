@@ -183,7 +183,7 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
                 ResourceHandler, name="resource")]
 
     # Application
-    application = Application(sockjs_router.urls + urls)
+    application = Application(urls + sockjs_router.urls)
 
     if bind:
         application.listen(port)
@@ -194,5 +194,8 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
     application.rooms = {}
     application.allowed_origins = allowed_origins
     application.service = service
+
+    # Set application back-reference in service
+    service.application = application
 
     return application

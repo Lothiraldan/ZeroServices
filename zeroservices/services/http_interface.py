@@ -68,110 +68,109 @@ class BasicAuth(object):
             raise ForbiddenError()
 
 
+# Handlers
+class BaseHandler(RequestHandler):
+
+    def __init__(self, *args, **kwargs):
+        super(BaseHandler, self).__init__(*args, **kwargs)
+        self.logger = logging.getLogger('api')
+
+    def check_origin(self, origin):
+        return origin in self.application.allowed_origins
+
+    def set_default_headers(self):
+        origins = ",".join(self.application.allowed_origins)
+        self.set_header("Access-Control-Allow-Origin", origins)
+        self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
+
+    def prepare(self):
+        resource = self.path_kwargs.get("collection")
+        self.application.auth.authorized(self, resource, self.request.method)
+
+    def _process(self, collection, action, resource_id=None):
+
+        payload = {}
+
+        try:
+            payload.update(json.loads(self.request.body.decode('utf-8')))
+        except (ValueError, UnicodeDecodeError):
+            self.logger.exception('Bad body: %s', self.request.body.decode('utf-8'))
+
+        payload.update({'collection': collection, 'action': action})
+
+        if resource_id:
+            payload['resource_id'] = resource_id
+
+        self.logger.info('Payload %s' % payload)
+
+        result = self.application.service.send(**payload)
+        self.logger.info('Result is %s' % result)
+
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps(result))
+        self.finish()
+
+    def write_error(self, status_code, **kwargs):
+        if self.settings.get("serve_traceback") and "exc_info" in kwargs:
+            # in debug mode, try to send a traceback
+            self.set_header('Content-Type', 'text/plain')
+            for line in traceback.format_exception(*kwargs["exc_info"]):
+                self.write(line)
+            self.finish()
+        else:
+            if 'exc_info' in kwargs:
+                for header in getattr(kwargs['exc_info'][1], 'headers', []):
+                    self.set_header(*header)
+
+            self.finish("<html><title>%(code)d: %(message)s</title>"
+                        "<body>%(code)d: %(message)s</body></html>" % {
+                            "code": status_code,
+                            "message": self._reason,
+                        })
+
+
+class MainHandler(BaseHandler):
+    def get(self):
+        self.write("Hello world from api")
+
+
+class CollectionHandler(BaseHandler):
+
+    def get(self, collection):
+        self._process(collection, 'list')
+
+    def post(self, collection):
+        custom_action = self.request.headers.get('X-CUSTOM-ACTION')
+
+        if not custom_action:
+            raise MethodNotAllowed()
+
+        self._process(collection, custom_action)
+
+
+class ResourceHandler(BaseHandler):
+
+    def get(self, collection, resource_id):
+        self._process(collection, 'get', resource_id)
+
+    def post(self, collection, resource_id):
+        custom_action = self.request.headers.get('X-CUSTOM-ACTION')
+        self._process(collection, custom_action or 'create', resource_id)
+
+    def delete(self, collection, resource_id):
+        self._process(collection, 'delete', resource_id)
+
+    def patch(self, collection, resource_id):
+        self._process(collection, 'patch', resource_id)
+
+    def options(self, collection, resource_id):
+        pass
+
+
 def get_http_interface(service, port=8888, auth=None, auth_args=(),
                        auth_kwargs={}, bind=True, allowed_origins=None):
-
-    logger = logging.getLogger('api')
-
     if allowed_origins is None:
         allowed_origins = {}
-
-    # Handlers
-
-
-    class BaseHandler(RequestHandler):
-
-        def check_origin(self, origin):
-            return origin in self.application.allowed_origins
-
-        def set_default_headers(self):
-            origins = ",".join(self.application.allowed_origins)
-            self.set_header("Access-Control-Allow-Origin", origins)
-            self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
-
-        def prepare(self):
-            resource = self.path_kwargs.get("collection")
-            auth.authorized(self, resource, self.request.method)
-
-        def _process(self, collection, action, resource_id=None):
-
-            payload = {}
-
-            try:
-                payload.update(json.loads(self.request.body.decode('utf-8')))
-            except (ValueError, UnicodeDecodeError):
-                logger.exception('Bad body: %s', self.request.body.decode('utf-8'))
-
-            payload.update({'collection': collection, 'action': action})
-
-            if resource_id:
-                payload['resource_id'] = resource_id
-
-            logger.info('Payload %s' % payload)
-
-            result = service.send(**payload)
-            logger.info('Result is %s' % result)
-
-            self.set_header("Content-Type", "application/json")
-            self.write(json.dumps(result))
-            self.finish()
-
-        def write_error(self, status_code, **kwargs):
-            if self.settings.get("serve_traceback") and "exc_info" in kwargs:
-                # in debug mode, try to send a traceback
-                self.set_header('Content-Type', 'text/plain')
-                for line in traceback.format_exception(*kwargs["exc_info"]):
-                    self.write(line)
-                self.finish()
-            else:
-                if 'exc_info' in kwargs:
-                    for header in getattr(kwargs['exc_info'][1], 'headers', []):
-                        self.set_header(*header)
-
-                self.finish("<html><title>%(code)d: %(message)s</title>"
-                            "<body>%(code)d: %(message)s</body></html>" % {
-                                "code": status_code,
-                                "message": self._reason,
-                            })
-
-
-    class MainHandler(BaseHandler):
-        def get(self):
-            self.write("Hello world from api")
-
-
-    class CollectionHandler(BaseHandler):
-
-        def get(self, collection):
-            self._process(collection, 'list')
-
-        def post(self, collection):
-            custom_action = self.request.headers.get('X-CUSTOM-ACTION')
-
-            if not custom_action:
-                raise MethodNotAllowed()
-
-            self._process(collection, custom_action)
-
-
-    class ResourceHandler(BaseHandler):
-
-        def get(self, collection, resource_id):
-            self._process(collection, 'get', resource_id)
-
-        def post(self, collection, resource_id):
-            custom_action = self.request.headers.get('X-CUSTOM-ACTION')
-            self._process(collection, custom_action or 'create', resource_id)
-
-        def delete(self, collection, resource_id):
-            self._process(collection, 'delete', resource_id)
-
-        def patch(self, collection, resource_id):
-            self._process(collection, 'patch', resource_id)
-
-        def options(self, collection, resource_id):
-            pass
-
 
     # Urls
     sockjs_router = SockJSRouter(SockJSHandler, '/realtime')
@@ -194,5 +193,6 @@ def get_http_interface(service, port=8888, auth=None, auth_args=(),
     application.clients = []
     application.rooms = {}
     application.allowed_origins = allowed_origins
+    application.service = service
 
     return application

@@ -3,7 +3,7 @@ var TodoItem = React.createClass({
     componentDidMount: function() {
         $.get("http://localhost:5001/todo_item/" + this.props.resource_id + '/', function(result) {
           if (this.isMounted()) {
-            this.setState(JSON.parse(result));
+            this.setState(result);
           }
         }.bind(this));
     },
@@ -29,7 +29,7 @@ var TodoList = React.createClass({
             dataType: "json",
             beforeSend: function(x) {
                 if (x && x.overrideMimeType) {
-                  x.overrideMimeType("application/j-son;charset=UTF-8");
+                  x.overrideMimeType("application/json;charset=UTF-8");
                 }
             },
         });
@@ -45,7 +45,7 @@ var TodoList = React.createClass({
             dataType: "json",
             beforeSend: function(x) {
                 if (x && x.overrideMimeType) {
-                  x.overrideMimeType("application/j-son;charset=UTF-8");
+                  x.overrideMimeType("application/json;charset=UTF-8");
                 }
             },
         });
@@ -83,7 +83,7 @@ var TodoApp = React.createClass({
     $.get("http://localhost:5001/todo_list/", function(result) {
       if (this.isMounted()) {
         var lists = {};
-        var result_lists = JSON.parse(result);
+        var result_lists = result;
         for(i in result_lists) {
           lists[result_lists[i].resource_id] = result_lists[i];
         }
@@ -153,7 +153,7 @@ var TodoApp = React.createClass({
         dataType: "json",
         beforeSend: function(x) {
             if (x && x.overrideMimeType) {
-              x.overrideMimeType("application/j-son;charset=UTF-8");
+              x.overrideMimeType("application/json;charset=UTF-8");
             }
         },
     });

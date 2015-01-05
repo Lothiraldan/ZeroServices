@@ -18,6 +18,8 @@ def is_callable(method):
 
 class BaseResourceService(BaseService):
 
+    application = None
+
     def __init__(self, name, medium):
         self.resources = {}
         self.resources_directory = {}

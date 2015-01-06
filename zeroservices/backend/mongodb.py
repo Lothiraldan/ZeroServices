@@ -72,9 +72,12 @@ class MongoDBResource(Resource):
 
 class MongoDBCollection(ResourceCollection):
 
-    def __init__(self, collection_name):
+    def __init__(self, collection_name, database_name):
         super(MongoDBCollection, self).__init__(MongoDBResource, collection_name)
-        self.collection = pymongo.Connection()['SmartForge'][collection_name]
+        self.database_name = database_name
+        self.collection_name = collection_name
+        self.database = pymongo.Connection()[database_name]
+        self.collection = self.database[collection_name]
 
     def instantiate(self, **kwargs):
         return super(MongoDBCollection, self).instantiate(

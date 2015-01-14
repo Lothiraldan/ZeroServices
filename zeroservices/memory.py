@@ -18,6 +18,9 @@ class MemoryMedium(BaseMedium):
         self.topics = []
         self.callbacks = []
 
+        # Testing utils
+        self.published_messages = []
+
     def register(self):
         self.logger.info('Register %s', self.get_node_info())
 
@@ -52,6 +55,7 @@ class MemoryMedium(BaseMedium):
         return self.msg_callback(message_type, **message)
 
     def publish(self, event_type, event_data):
+        self.published_messages.append((event_type, event_data))
         for service in [s for s in SERVICES_LIST if s.node_id != self.node_id]:
             service.process_event(event_type, event_data)
 
@@ -82,6 +86,7 @@ class MemoryResource(Resource):
 
     @is_callable
     def create(self, resource_data):
+        resource_data = super(MemoryResource, self).create(resource_data)
         self.collection[self.resource_id] = resource_data
         self.publish('create', {'action': 'create', 'resource_data': resource_data})
         return {'resource_id': self.resource_id}
@@ -97,6 +102,7 @@ class MemoryResource(Resource):
 
     @is_callable
     def patch(self, patch):
+        patch = super(MemoryResource, self).patch(patch)
         resource = self.collection[self.resource_id]
 
         set_keys = patch['$set']
@@ -128,8 +134,10 @@ class MemoryResource(Resource):
 
 class MemoryCollection(ResourceCollection):
 
-    def __init__(self, collection_name):
-        super(MemoryCollection, self).__init__(MemoryResource, collection_name)
+    def __init__(self, collection_name, resource_class=None):
+        if resource_class is None:
+            resource_class = MemoryResource
+        super(MemoryCollection, self).__init__(resource_class, collection_name)
         self._collection = {}
 
     def instantiate(self, **kwargs):

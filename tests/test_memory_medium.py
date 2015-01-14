@@ -51,6 +51,10 @@ class MemoryMediumCommunicationTestCase(TestCase):
         self.assertEqual(self.service3.on_event.call_args_list,
                          [call('type1', 'message1')])
 
+        # Also store published message for testing purposes
+        expected_message = ('type1', 'message1')
+        self.assertIn(expected_message, self.medium1.published_messages)
+
     def test_direct_call(self):
         self.service1.main()
         self.service2.main()

@@ -16,6 +16,13 @@ def is_callable(method):
     return method
 
 
+def dynamic_attribute(*dependencies):
+    def wrapper(func):
+        func.dependencies = dependencies
+        return func
+    return wrapper
+
+
 class BaseResourceService(BaseService):
 
     application = None
@@ -171,11 +178,18 @@ class ResourceCollection(object):
 class Resource(object):
 
     __metaclass__ = ABCMeta
+    dynamic_attributes = []
 
     def __init__(self, resource_id, service, resource_collection):
         self.resource_id = resource_id
         self.service = service
         self.resource_collection = resource_collection
+
+        self.dynamic_attributes_map = {}
+
+        for dynamic_attribute in self.dynamic_attributes:
+            dynamic_attribute_method = getattr(self, dynamic_attribute)
+            self.dynamic_attributes_map[dynamic_attribute] = (dynamic_attribute_method, dynamic_attribute_method.dependencies)
 
     @abstractmethod
     @is_callable
@@ -185,12 +199,26 @@ class Resource(object):
     @abstractmethod
     @is_callable
     def create(self, resource_data):
-        return self
+        # Iterate on dynamic attributes
+        for dynamic_attribute, meta in self.dynamic_attributes_map.items():
+            method_args = {key: resource_data[key] for key in meta[1]}
+            resource_data[dynamic_attribute] = meta[0](**method_args)
+        return resource_data
 
     @abstractmethod
     @is_callable
     def patch(self, patch):
-        pass
+        # Iterate on dynamic attributes
+        patch_keys = patch['$set'].keys()
+        for key in patch_keys:
+            for dynamic_attribute, meta in self.dynamic_attributes_map.items():
+                if key in meta[1]:
+                    if not all(require in patch['$set'] for require in meta[1]):
+                        raise Exception('TODO')
+                    else:
+                        method_args = {key: patch['$set'][key] for key in meta[1]}
+                        patch['$set'][dynamic_attribute] = meta[0](**method_args)
+        return patch
 
     @abstractmethod
     @is_callable

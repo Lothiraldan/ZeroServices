@@ -214,7 +214,9 @@ class Resource(object):
             for dynamic_attribute, meta in self.dynamic_attributes_map.items():
                 if key in meta[1]:
                     if not all(require in patch['$set'] for require in meta[1]):
-                        raise Exception('TODO')
+                        document = self.get()['resource_data']
+                        method_args = {key: patch['$set'].get(key, document[key]) for key in meta[1]}
+                        patch['$set'][dynamic_attribute] = meta[0](**method_args)
                     else:
                         method_args = {key: patch['$set'][key] for key in meta[1]}
                         patch['$set'][dynamic_attribute] = meta[0](**method_args)

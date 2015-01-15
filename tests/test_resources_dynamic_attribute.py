@@ -15,13 +15,22 @@ except ImportError:
     from mock import call, Mock, patch, sentinel
 
 
-class DynamicAttributeResource(MemoryResource):
+class DynamicAttributeDoubleSumResource(MemoryResource):
 
     dynamic_attributes = ['double_sum']
 
     @dynamic_attribute('sum')
     def double_sum(self, sum):
         return sum * 2
+
+
+class DynamicAttributeFooBarSumResource(MemoryResource):
+
+    dynamic_attributes = ['foo_bar_sum']
+
+    @dynamic_attribute('foo', 'bar')
+    def foo_bar_sum(self, foo, bar):
+        return foo +bar
 
 
 
@@ -33,9 +42,12 @@ class ResourceDynamicAttributeTestCase(TestCase):
         self.medium = MemoryMedium('Node')
         self.service = ResourceService('Service', self.medium)
 
-        self.collection = MemoryCollection('resource', DynamicAttributeResource)
+        self.collection = MemoryCollection('resource', DynamicAttributeDoubleSumResource)
         self.collection.resource_name = self.resource_name
         self.collection.service = self.service
+
+    def set_resource_class(self, resource_class):
+        self.collection.resource_class = resource_class
 
     def test_resource_create(self):
         resource_id = 'UUID1'
@@ -91,4 +103,32 @@ class ResourceDynamicAttributeTestCase(TestCase):
     def test_resource_update_multiple_requirements(self):
         '''update only one requirement
         '''
-        pass
+        self.set_resource_class(DynamicAttributeFooBarSumResource)
+        resource_id = 'UUID1'
+        message_args = {'resource_data': {'foo': 1, 'bar': 1},
+                        'resource_id': resource_id}
+        query = {'action': 'create'}
+        query.update(message_args)
+
+        self.assertEquals(self.collection.on_message(**query),
+                          {'resource_id': resource_id})
+
+        # Update
+        message_args = {'patch': {'$set': {'foo': 3}},
+                        'resource_id': resource_id}
+        query = {'action': 'patch'}
+        query.update(message_args)
+
+        self.medium.published_messages = []
+
+        self.assertEqual(self.collection.on_message(**query),
+                         {'foo': 3, 'foo_bar_sum': 4, 'bar': 1})
+
+        expected_published_message = [
+            ('Test.patch.UUID1',
+            {'action': 'patch',
+             'patch': {'$set': {'foo': 3, 'foo_bar_sum': 4}},
+             'resource_id': 'UUID1',
+             'resource_name': 'Test'})]
+        self.assertEquals(self.medium.published_messages,
+                          expected_published_message)

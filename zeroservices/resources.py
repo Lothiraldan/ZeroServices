@@ -201,8 +201,11 @@ class Resource(object):
     def create(self, resource_data):
         # Iterate on dynamic attributes
         for dynamic_attribute, meta in self.dynamic_attributes_map.items():
-            method_args = {key: resource_data[key] for key in meta[1]}
-            resource_data[dynamic_attribute] = meta[0](**method_args)
+            try:
+                method_args = {key: resource_data[key] for key in meta[1]}
+                resource_data[dynamic_attribute] = meta[0](**method_args)
+            except KeyError:
+                pass
         return resource_data
 
     @abstractmethod

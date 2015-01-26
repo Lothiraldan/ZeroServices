@@ -70,6 +70,27 @@ class ResourceDynamicAttributeTestCase(TestCase):
         self.assertEquals(self.medium.published_messages,
                           expected_published_message)
 
+    def test_resource_create_missing_requirement(self):
+        resource_id = 'UUID1'
+        message_args = {'resource_data': {'foo': 'bar'},
+                        'resource_id': resource_id}
+        query = {'action': 'create'}
+        query.update(message_args)
+
+        self.medium.published_messages = []
+
+        self.assertEquals(self.collection.on_message(**query),
+                          {'resource_id': resource_id})
+
+        expected_published_message = [
+            ('Test.create.UUID1',
+            {'action': 'create',
+             'resource_data': {'foo': 'bar'},
+             'resource_id': 'UUID1',
+             'resource_name': 'Test'})]
+        self.assertEquals(self.medium.published_messages,
+                          expected_published_message)
+
     def test_resource_update(self):
         resource_id = 'UUID1'
         message_args = {'resource_data': {'sum': 1, 'foo': 'bar'},

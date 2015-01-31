@@ -95,7 +95,7 @@ class BaseHandler(RequestHandler):
         resource = self.path_kwargs.get("collection")
         self.application.auth.authorized(self, resource, self.request.method)
 
-    def _process(self, collection, action, resource_id=None):
+    def _process(self, collection, action, resource_id=None, **kwargs):
 
         payload = {}
 
@@ -110,6 +110,7 @@ class BaseHandler(RequestHandler):
 
         if resource_id:
             payload['resource_id'] = resource_id
+        payload.update(kwargs)
 
         self.logger.info('Payload %s' % payload)
 
@@ -152,7 +153,12 @@ class MainHandler(BaseHandler):
 class CollectionHandler(BaseHandler):
 
     def get(self, collection):
-        self._process(collection, 'list')
+        args = {key: value[0] for key, value in self.request.arguments.items()}
+        print args
+        if 'text' in args:
+            text = args.pop('text')
+            args['$text'] = {'$search': text}
+        self._process(collection, 'list', where=args)
 
     def post(self, collection):
         custom_action = self.request.headers.get('X-CUSTOM-ACTION')

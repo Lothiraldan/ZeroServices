@@ -296,7 +296,7 @@ class HttpInterfaceBasicAuthTestCase(HttpInterfaceTestCase):
         self.assertEqual(result.code, 401)
         self.assertEqual(result.headers['WWW-Authenticate'], 'Basic realm=tmr')
 
-    def test_header_missing_password(self):
+    def test_header_missing_password_not_b64(self):
         url = self.app.reverse_url("main")
         auth_header = self.get_auth_header(self.username)
         result = self.fetch(url, headers={'Authorization':
@@ -320,21 +320,3 @@ class HttpInterfaceBasicAuthTestCase(HttpInterfaceTestCase):
                                           'Basic {0}'.format(auth_header)})
 
         self.assertEqual(result.code, 200)
-
-
-class HttpInterfaceWebsocketTestCase(HttpInterfaceTestCase):
-
-    def setUp(self):
-        super(HttpInterfaceWebsocketTestCase, self).setUp()
-        self.resource_id = "feature/test"
-        self.url = "/realtime" # Fix reverse
-
-    def get_protocol(self):
-        return 'ws'
-
-    def test_get(self):
-        client = websocket_connect(self.get_url(self.url), io_loop=self.io_loop,
-                                   callback=self.stop)
-        self.wait()
-
-        self.assertTrue(isinstance(client.result(), WebSocketClientConnection))

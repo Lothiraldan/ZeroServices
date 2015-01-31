@@ -6,6 +6,7 @@ var Power = React.createClass({
           <div>
             <h2>{this.props.resource_id} power</h2>
             <h3>Description: {this.props.resource_data.description}</h3>
+            <h3>Status: {this.props.resource_data.status}</h3>
             <h3>Value: {this.props.resource_data.value}</h3>
             <h3>Result: {this.props.resource_data.result}</h3>
           </div>

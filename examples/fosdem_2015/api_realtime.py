@@ -11,6 +11,6 @@ class Auth(object):
 
 
 if __name__ == '__main__':
-    todo = RealtimeResourceService('todo_mvc', ZeroMQMedium(port_random=True))
-    application = get_http_interface(todo, port=5001, auth=Auth(), allowed_origins="*")
-    todo.main()
+    app = RealtimeResourceService('power_fosdem', ZeroMQMedium(port_random=True))
+    application = get_http_interface(app, port=5001, auth=Auth(), allowed_origins="*")
+    app.main()

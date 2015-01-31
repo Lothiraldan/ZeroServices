@@ -8,6 +8,7 @@ from tornado.web import URLSpec, RequestHandler, Application, HTTPError
 from tornado.options import parse_command_line
 from sockjs.tornado import SockJSRouter
 from .sockjs_interface import SockJSHandler
+from ..exceptions import UnknownService
 
 
 class AuthenticationError(HTTPError):
@@ -112,12 +113,17 @@ class BaseHandler(RequestHandler):
 
         self.logger.info('Payload %s' % payload)
 
-        result = self.application.service.send(**payload)
-        self.logger.info('Result is %s' % result)
-
-        self.set_header("Content-Type", "application/json")
-        self.write(json.dumps(result))
-        self.finish()
+        try:
+            result = self.application.service.send(**payload)
+            self.logger.info('Result is %s' % result)
+        except UnknownService as e:
+            self.set_status(404)
+            self.set_header("Content-Type", "application/json")
+            self.finish(json.dumps({'error': str(e)}))
+        else:
+            self.set_header("Content-Type", "application/json")
+            self.write(json.dumps(result))
+            self.finish()
 
     def write_error(self, status_code, **kwargs):
         if self.settings.get("serve_traceback") and "exc_info" in kwargs:

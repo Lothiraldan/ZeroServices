@@ -4,6 +4,7 @@ import sys
 from base64 import b64encode
 from zeroservices.services import get_http_interface, BasicAuth
 from zeroservices.resources import ResourceService
+from zeroservices.exceptions import UnknownService
 from tornado.testing import AsyncHTTPTestCase
 from tornado.websocket import websocket_connect, WebSocketClientConnection
 
@@ -64,6 +65,7 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
     def setUp(self):
         super(HttpInterfaceCollectionTestCase, self).setUp()
         self.url = self.app.reverse_url("collection", self.collection_name)
+        self.collection_bad_url = self.app.reverse_url("collection", "bad")
 
     def test_get_on_collection(self):
         self.sentinel = [{'_id': '#1'}]
@@ -76,6 +78,15 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
 
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="list"))
+
+    def test_get_on_unknown_collection(self):
+        self.service.send.side_effect = UnknownService('unknown service bad')
+
+        result = self.fetch(self.collection_bad_url)
+        self.assertEqual(result.code, 404)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
+        self.assertEqual(json.loads(result.body.decode('utf-8')),
+                         {'error': 'unknown service bad'})
 
 
     def test_post_create_on_collection(self):

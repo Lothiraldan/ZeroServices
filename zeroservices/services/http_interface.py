@@ -154,10 +154,6 @@ class CollectionHandler(BaseHandler):
 
     def get(self, collection):
         args = {key: value[0] for key, value in self.request.arguments.items()}
-        print args
-        if 'text' in args:
-            text = args.pop('text')
-            args['$text'] = {'$search': text}
         self._process(collection, 'list', where=args)
 
     def post(self, collection):

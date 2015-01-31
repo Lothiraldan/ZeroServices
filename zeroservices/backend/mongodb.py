@@ -87,6 +87,12 @@ class MongoDBCollection(ResourceCollection):
     def list(self, where=None):
         if where is None:
             where = {}
+
+        # Support for fulltext-search
+        if 'text' in where:
+            text = where.pop('text')
+            where['$text'] = {'$search': text}
+
         result = list()
         for document in self.collection.find(where):
             result.append({'resource_id': document.pop('_id'),

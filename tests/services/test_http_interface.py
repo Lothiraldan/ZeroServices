@@ -77,15 +77,22 @@ class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):
         self.assertEqual(self.service.send.call_args,
             call(collection=self.collection_name, action="list"))
 
-    def test_post_missing_custom_action_on_collection(self):
-        self.sentinel = [{'_id': '#1'}]
-        self.service.send.return_value = self.sentinel
+
+    def test_post_create_on_collection(self):
+        resource = {'resource_id': '#1', 'resource_data': {}}
+        self.service.send.return_value = resource
 
         # Include empty body just for the tests :(
-        result = self.fetch(self.url, method="POST", body='')
-        self.assertEqual(result.code, 405)
+        body = json.dumps(resource)
+        result = self.fetch(self.url, method="POST", body=body)
+        self.assertEqual(result.code, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
+        self.assertEqual(json.loads(result.body.decode('utf-8')), resource)
 
-        self.assertEqual(self.service.send.call_count, 0)
+        self.assertEqual(self.service.send.call_args,
+                         call(collection=self.collection_name,
+                              action='create', resource_data={},
+                              resource_id=resource['resource_id']))
 
 
     def test_custom_action_on_collection(self):

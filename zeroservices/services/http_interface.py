@@ -9,11 +9,18 @@ from tornado.options import parse_command_line
 from sockjs.tornado import SockJSRouter
 from .sockjs_interface import SockJSHandler
 
+
 class AuthenticationError(HTTPError):
 
     def __init__(self, *args, **kwargs):
         super(AuthenticationError, self).__init__(401, *args, **kwargs)
         self.headers = [('WWW-Authenticate', 'Basic realm=tmr')]
+
+
+class BadRequest(HTTPError):
+
+    def __init__(self, *args, **kwargs):
+        super(ForbiddenError, self).__init__(400, *args, **kwargs)
 
 
 class ForbiddenError(HTTPError):
@@ -94,7 +101,9 @@ class BaseHandler(RequestHandler):
         try:
             payload.update(json.loads(self.request.body.decode('utf-8')))
         except (ValueError, UnicodeDecodeError):
-            self.logger.exception('Bad body: %s', self.request.body.decode('utf-8'))
+            self.logger.warning('Bad body: %s',
+                                self.request.body.decode('utf-8'),
+                                exc_info=True)
 
         payload.update({'collection': collection, 'action': action})
 
@@ -142,10 +151,7 @@ class CollectionHandler(BaseHandler):
     def post(self, collection):
         custom_action = self.request.headers.get('X-CUSTOM-ACTION')
 
-        if not custom_action:
-            raise MethodNotAllowed()
-
-        self._process(collection, custom_action)
+        self._process(collection, custom_action or 'create')
 
 
 class ResourceHandler(BaseHandler):

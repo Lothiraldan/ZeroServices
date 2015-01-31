@@ -1,0 +1,7 @@
+Install ZeroServices and its dependencies (pip install -r requirements.txt in zeroservices root).
+Launch api_realtime.py, power.py and worker.py.
+Run bower install to install JS dependencies.
+Launch "python -m SimpleHTTPServer".
+Access the Web UI on "http://localhost:8000".
+Play with the API on "http://localhost:5001/power/" and see the result on the Web UI.
+Have fun!

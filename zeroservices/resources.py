@@ -121,12 +121,17 @@ class RealtimeResourceService(ResourceService):
     '''
 
     def on_event(self, message_type, data):
+        # Test if someone is connected to the socks endpoint
+        if not self.application.clients:
+            return
+
         self.logger.info("On event %s", locals())
         self.application.clients[0].publishToRoom('*', 'event', data)
 
         topics = accumulate(message_type.split('.'), lambda x, y: '.'.join((x, y)))
 
         for topic in topics:
+            self.logger.info('Publish %s to %s topic', data, topic)
             self.application.clients[0].publishToRoom(topic, 'event', data)
 
 

@@ -1,0 +1,7 @@
+{
+    "project_name": "sample_project_all_in_one",
+    "mongodb_database": "test",
+    "resources (separated by comma)": "",
+    "api_port": 5001,
+    "realtime_api": false
+}

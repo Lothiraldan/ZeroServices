@@ -1,32 +1,31 @@
-from zmq.eventloop import ioloop, zmqstream
-ioloop.install()
+import asyncio
+import aiohttp
+from aiohttp import web
 
 import sys
 import json
 
 from zeroservices import BaseService
 from zeroservices import ZeroMQMedium
+from zeroservices.discovery import UdpDiscoveryMedium
 
-from tornado import gen
-from tornado import web
-from tornado import websocket
+from jinja2 import Environment, FileSystemLoader
 
-from time import time
+
+clients = set()
 
 
 class ChatService(BaseService):
 
-    def __init__(self, username):
-        medium = ZeroMQMedium(port_random=True)
-        super(ChatService, self).__init__(username, medium)
-
-    def on_event(self, message_type, message):
+    @asyncio.coroutine
+    def on_event(self, message_type, **kwargs):
         """Called when a multicast message is received
         """
         msg = {'type': message_type}
-        msg.update(message)
+        msg.update(kwargs)
         self.send_to_all_clients(json.dumps(msg))
 
+    @asyncio.coroutine
     def on_message(self, message_type, **kwargs):
         """Called when an unicast message is received
         """
@@ -48,61 +47,79 @@ class ChatService(BaseService):
 
     def send_to_all_clients(self, msg):
         for client in clients:
-            client.write_message(msg)
+            client.send_str(msg)
+
+loop = asyncio.get_event_loop()
+medium = ZeroMQMedium(loop, UdpDiscoveryMedium, node_id=sys.argv[1])
+s = ChatService(sys.argv[1], medium)
+
+env = Environment(loader=FileSystemLoader('.'))
+
+@asyncio.coroutine
+def main_handler(request):
+    template = env.get_template('chat.html')
+    content = template.render(port=int(sys.argv[2]), name=sys.argv[1])
+    return web.Response(text=content, content_type="text/html")
 
 
-s = ChatService(sys.argv[1])
-clients = []
+@asyncio.coroutine
+def websocket_handler(request):
 
-class MainHandler(web.RequestHandler):
-    def get(self):
-        return self.render('chat.html', port=int(sys.argv[2]), name=sys.argv[1])
+    ws = web.WebSocketResponse()
+    ws.start(request)
 
+    clients.add(ws)
+    for node_id, node in s.directory.items():
+        msg = json.dumps({'type': 'user_join',
+                          'id': node_id, 'name': node['name']})
+        ws.send_str(msg)
 
-class WebSocketHandler(websocket.WebSocketHandler):
+    while True:
+        msg = yield from ws.receive()
 
-    def check_origin(self, origin):
-        return True
+        if msg.tp == aiohttp.MsgType.text:
+            if msg.data == 'close':
+                clients.remove(ws)
+                yield from ws.close()
+            else:
+                message = json.loads(msg.data)
 
-    def open(self):
-        """Called on new websocket connection
-        """
-        clients.append(self)
-        for node_id, node in s.nodes_directory.items():
-            msg = json.dumps({'type': 'user_join',
-                              'id': node_id, 'name': node['name']})
-            self.write_message(msg)
+                if message['type'] == 'message':
+                    msg = {'username': sys.argv[1], 'message': message['data']['message']}
+                    yield from s.publish(str(message['type']), msg)
+                elif message['type'] == 'direct_message':
+                    msg = {'from': sys.argv[1], 'message': message['data']['message']}
+                    yield from s.send(message['data']['to'], msg,
+                                      message_type=str(message['type']),
+                                      wait_response=False)
+        elif msg.tp == aiohttp.MsgType.close:
+            clients.remove(ws)
+        elif msg.tp == aiohttp.MsgType.error:
+            clients.remove(ws)
+            print('ws connection closed with exception %s',
+                  ws.exception())
 
-    def on_close(self):
-        """Called on websocket connection close
-        """
-        clients.remove(self)
+    return ws
 
-    def on_message(self, message):
-        """Called on websocket message
-        """
-        message = json.loads(message)
-        if message['type'] == 'message':
-            msg = {'username': sys.argv[1], 'message': message['data']['message']}
-            s.publish(str(message['type']), msg)
-        elif message['type'] == 'direct_message':
-            msg = {'from': sys.argv[1], 'message': message['data']['message']}
-            s.send(message['data']['to'], msg,
-                   message_type=str(message['type']),
-                   wait_response=False)
-
-urls = [
-    (r"/", MainHandler),
-    (r"/websocket", WebSocketHandler),
-    (r"/static/(.*)", web.StaticFileHandler, {"path": "."})]
+app = web.Application()
+app.router.add_route('GET', '/', main_handler)
+app.router.add_static('/static', '.')
+app.router.add_route('*', '/websocket', websocket_handler)
 
 if __name__ == '__main__':
-    application = web.Application(urls, debug=True)
-    application.listen(int(sys.argv[2]))
+    handler = app.make_handler()
+    f = loop.create_server(handler, '0.0.0.0', int(sys.argv[2]))
+    srv = loop.run_until_complete(f)
+    loop.run_until_complete(s.start())
+    print('serving on', srv.sockets[0].getsockname())
     try:
-        ioloop.IOLoop.instance().add_timeout(time() + 1, s.medium.register)
-        ioloop.IOLoop.instance().start()
+        loop.run_forever()
     except KeyboardInterrupt:
+        pass
+    finally:
+        loop.run_until_complete(handler.finish_connections(1.0))
+        srv.close()
         s.close()
-        for client in clients:
-            client.close()
+        loop.run_until_complete(srv.wait_closed())
+        loop.run_until_complete(app.finish())
+    loop.close()

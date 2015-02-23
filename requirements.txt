@@ -1,10 +1,10 @@
 pyzmq
-tornado
-pymongo
+pymongo>=3.0
 mock
 voluptuous
 requests
 responses
 nose
 six
-sockjs-tornado
+aiozmq
+aiohttp

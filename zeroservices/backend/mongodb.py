@@ -4,6 +4,7 @@ import pymongo
 from zeroservices import ResourceCollection, Resource
 from zeroservices.resources import is_callable
 
+
 class MongoDBResource(Resource):
 
     def __init__(self, collection, **kwargs):
@@ -17,7 +18,7 @@ class MongoDBResource(Resource):
         document_data.update(resource_data)
         self.collection.insert(document_data)
 
-        self.publish('create', {'action': 'create',
+        yield from self.publish('create', {'action': 'create',
                                 'resource_data': resource_data})
 
         return {'resource_id': self.resource_id}
@@ -37,7 +38,7 @@ class MongoDBResource(Resource):
         new_document = self.collection.find_and_modify({'_id': self.resource_id},
             patch, new=True)
 
-        self.publish('patch', {'action': 'patch', 'patch': patch})
+        yield from self.publish('patch', {'action': 'patch', 'patch': patch})
 
         new_document.pop('_id')
         return new_document
@@ -45,7 +46,7 @@ class MongoDBResource(Resource):
     @is_callable
     def delete(self):
         self.collection.remove({'_id': self.resource_id})
-        self.publish('delete', {'action': 'delete'})
+        yield from self.publish('delete', {'action': 'delete'})
         return 'OK'
 
     @is_callable
@@ -58,8 +59,9 @@ class MongoDBResource(Resource):
         self.collection.find_and_modify({'_id': self.resource_id}, patch,
                                         new=True)
 
-        self.publish('add_link', {'action': 'add_link', 'target_id': target_id,
-            'title': title, 'relation': relation})
+        event = {'action': 'add_link', 'target_id': target_id,
+                 'title': title, 'relation': relation}
+        yield from self.publish('add_link', event)
 
         return "OK"
 
@@ -72,11 +74,14 @@ class MongoDBResource(Resource):
 
 class MongoDBCollection(ResourceCollection):
 
+    resource_class = MongoDBResource
+
     def __init__(self, collection_name, database_name):
-        super(MongoDBCollection, self).__init__(MongoDBResource, collection_name)
+        super(MongoDBCollection, self).__init__(collection_name)
         self.database_name = database_name
         self.collection_name = collection_name
-        self.database = pymongo.Connection()[database_name]
+        self.connection = pymongo.MongoClient()
+        self.database = self.connection[database_name]
         self.collection = self.database[collection_name]
 
     def instantiate(self, **kwargs):

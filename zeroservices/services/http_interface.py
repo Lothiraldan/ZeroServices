@@ -1,39 +1,39 @@
+import asyncio
 import logging
 import json
 import binascii
 import traceback
 
+from aiohttp import web
+from aiohttp import hdrs
 from base64 import b64decode
-from tornado.web import URLSpec, RequestHandler, Application, HTTPError
-from tornado.options import parse_command_line
-from sockjs.tornado import SockJSRouter
-from .sockjs_interface import SockJSHandler
+from .realtime import RealtimeHandler
 from ..exceptions import UnknownService
 
 
-class AuthenticationError(HTTPError):
+# class AuthenticationError(HTTPError):
 
-    def __init__(self, *args, **kwargs):
-        super(AuthenticationError, self).__init__(401, *args, **kwargs)
-        self.headers = [('WWW-Authenticate', 'Basic realm=tmr')]
-
-
-class BadRequest(HTTPError):
-
-    def __init__(self, *args, **kwargs):
-        super(ForbiddenError, self).__init__(400, *args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         super(AuthenticationError, self).__init__(401, *args, **kwargs)
+#         self.headers = [('WWW-Authenticate', 'Basic realm=tmr')]
 
 
-class ForbiddenError(HTTPError):
+# class BadRequest(HTTPError):
 
-    def __init__(self, *args, **kwargs):
-        super(ForbiddenError, self).__init__(403, *args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         super(ForbiddenError, self).__init__(400, *args, **kwargs)
 
 
-class MethodNotAllowed(HTTPError):
+# class ForbiddenError(HTTPError):
 
-    def __init__(self, *args, **kwargs):
-        super(MethodNotAllowed, self).__init__(405, *args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         super(ForbiddenError, self).__init__(403, *args, **kwargs)
+
+
+# class MethodNotAllowed(HTTPError):
+
+#     def __init__(self, *args, **kwargs):
+#         super(MethodNotAllowed, self).__init__(405, *args, **kwargs)
 
 
 class BasicAuth(object):
@@ -77,36 +77,33 @@ class BasicAuth(object):
 
 
 # Handlers
-class BaseHandler(RequestHandler):
+class BaseHandler(object):
 
-    def __init__(self, *args, **kwargs):
-        super(BaseHandler, self).__init__(*args, **kwargs)
+    def __init__(self, service):
         self.logger = logging.getLogger('api')
-
-    def check_origin(self, origin):
-        return origin in self.application.allowed_origins
-
-    def set_default_headers(self):
-        origins = ",".join(self.application.allowed_origins)
-        self.set_header("Access-Control-Allow-Origin", origins)
-        self.set_header("Access-Control-Allow-Headers", "X-CUSTOM-ACTION")
+        self.service = service
 
     def prepare(self):
         resource = self.path_kwargs.get("collection")
         self.application.auth.authorized(self, resource, self.request.method)
 
-    def _process(self, collection, action, resource_id=None, **kwargs):
+    def _process(self, request, collection, action, resource_id=None,
+                 success_status_code=200, **kwargs):
 
         payload = {}
 
-        try:
-            payload.update(json.loads(self.request.body.decode('utf-8')))
-        except (ValueError, UnicodeDecodeError):
-            self.logger.warning('Bad body: %s',
-                                self.request.body.decode('utf-8'),
-                                exc_info=True)
+        request_body = yield from request.text()
 
-        payload.update({'collection': collection, 'action': action})
+        if request_body:
+            try:
+                request_body = json.loads(request_body)
+                payload.update(request_body)
+            except (ValueError, UnicodeDecodeError):
+                self.logger.warning('Bad body: %s',
+                                    request_body,
+                                    exc_info=True)
+
+        payload.update({'collection_name': collection, 'action': action})
 
         if resource_id:
             payload['resource_id'] = resource_id
@@ -115,101 +112,149 @@ class BaseHandler(RequestHandler):
         self.logger.info('Payload %s' % payload)
 
         try:
-            result = self.application.service.send(**payload)
+            result = yield from self.service.send(**payload)
             self.logger.info('Result is %s' % result)
         except UnknownService as e:
-            self.set_status(404)
-            self.set_header("Content-Type", "application/json")
-            self.finish(json.dumps({'error': str(e)}))
+            self.logger.error('Payload error %s' % e)
+            err_body = json.dumps({'error': str(e)}).encode('utf-8')
+            raise web.HTTPNotFound(content_type="application/json",
+                                   body=err_body)
         else:
-            self.set_header("Content-Type", "application/json")
-            self.write(json.dumps(result))
-            self.finish()
-
-    def write_error(self, status_code, **kwargs):
-        if self.settings.get("serve_traceback") and "exc_info" in kwargs:
-            # in debug mode, try to send a traceback
-            self.set_header('Content-Type', 'text/plain')
-            for line in traceback.format_exception(*kwargs["exc_info"]):
-                self.write(line)
-            self.finish()
-        else:
-            if 'exc_info' in kwargs:
-                for header in getattr(kwargs['exc_info'][1], 'headers', []):
-                    self.set_header(*header)
-
-            self.finish("<html><title>%(code)d: %(message)s</title>"
-                        "<body>%(code)d: %(message)s</body></html>" % {
-                            "code": status_code,
-                            "message": self._reason,
-                        })
+            response_body = json.dumps(result).encode('utf-8')
+            return web.Response(content_type="application/json",
+                                body=response_body, status=success_status_code)
 
 
 class MainHandler(BaseHandler):
-    def get(self):
-        self.write("Hello world from api")
+
+    def main(self, request):
+        repository = self.service.resources_directory
+        response = json.dumps({'resources': list(repository.keys())}).encode('utf-8')
+        return web.Response(body=response)
+
+
+@asyncio.coroutine
+def options(request):
+    return web.Response(body=b" ")
 
 
 class CollectionHandler(BaseHandler):
 
-    def get(self, collection):
-        args = {key: value[0] for key, value in self.request.arguments.items()}
-        self._process(collection, 'list', where=args)
+    def dispatch(self, request):
+        return getattr(self, request.method.lower())(request)
 
-    def post(self, collection):
-        custom_action = self.request.headers.get('X-CUSTOM-ACTION')
+    def get(self, request):
+        return self._process(request, request.match_info['collection'], 'list')
 
-        self._process(collection, custom_action or 'create')
+    # def get(self, collection):
+    #     args = {key: value[0] for key, value in self.request.arguments.items()}
+    #     self._process(collection, 'list', where=args)
+
+    def post(self, request):
+        return self._process(request, request.match_info['collection'],
+                             'create', success_status_code=201)
+
+    def custom_action(self, request):
+        return self._process(request, request.match_info['collection'],
+                             request.match_info['action'])
+
+    def options(self, request):
+        return web.Response(body=b"")
 
 
 class ResourceHandler(BaseHandler):
 
-    def get(self, collection, resource_id):
-        self._process(collection, 'get', resource_id)
+    def dispatch(self, request):
+        return getattr(self, request.method.lower())(request)
 
-    def post(self, collection, resource_id):
-        custom_action = self.request.headers.get('X-CUSTOM-ACTION')
-        self._process(collection, custom_action or 'create', resource_id)
+    def get(self, request):
+        return self._process(request, request.match_info['collection'],
+                             'get', request.match_info['resource_id'])
 
-    def delete(self, collection, resource_id):
-        self._process(collection, 'delete', resource_id)
+    def delete(self, request):
+        return self._process(request, request.match_info['collection'],
+                             'delete', request.match_info['resource_id'],
+                             success_status_code=204)
 
-    def patch(self, collection, resource_id):
-        self._process(collection, 'patch', resource_id)
+    def patch(self, request):
+        return self._process(request, request.match_info['collection'],
+                             'patch', request.match_info['resource_id'])
 
-    def options(self, collection, resource_id):
+    def options(self, request):
         pass
 
+    def custom_action(self, request):
+        return self._process(request, request.match_info['collection'],
+                             request.match_info['action'],
+                             request.match_info['resource_id'])
 
-def get_http_interface(service, port=8888, auth=None, auth_args=(),
+
+@asyncio.coroutine
+def cors_middleware(app, handler):
+    @asyncio.coroutine
+    def middleware(request):
+        response = yield from handler(request)
+
+        allowed_origins = app.allowed_origins
+        if allowed_origins != "*":
+            if len(allowed_origins) in [0, 1]:
+                allowed_origins = allowed_origins
+
+        response.headers['Access-Control-Allow-Origin'] = app.allowed_origins
+        return response
+    return middleware
+
+
+@asyncio.coroutine
+def get_http_interface(service, loop, port=8888, auth=None, auth_args=(),
                        auth_kwargs={}, bind=True, allowed_origins=None):
     if allowed_origins is None:
-        allowed_origins = {}
+        allowed_origins = ""
 
     # Urls
-    sockjs_router = SockJSRouter(SockJSHandler, '/realtime')
+    # sockjs_router = SockJSRouter(SockJSHandler, '/realtime')
 
-    urls = [
-        URLSpec(r"/", MainHandler, name="main"),
-        URLSpec(r"/(?P<collection>[^\/]+)/$",
-                CollectionHandler, name="collection"),
-        URLSpec(r"/(?P<collection>[^\/]+)/(?P<resource_id>.+)/$",
-                ResourceHandler, name="resource")]
+    app = web.Application(loop=loop, middlewares=[cors_middleware])
+    app.allowed_origins = allowed_origins
 
-    # Application
-    application = Application(urls + sockjs_router.urls)
+    # Realtime endpoint
+    realtime_handler = RealtimeHandler(app, service)
+    app.router.add_route('*', '/realtime', handler=realtime_handler.handler,
+                         name='realtime')
+    hdrs.ACCESS_CONTROL_ALLOW_ORIGIN = allowed_origins
 
-    if bind:
-        application.listen(port)
+    # URLS
+    main_handler = MainHandler(service)
+    app.router.add_route('*', '/', main_handler.main, name='main')
 
-    parse_command_line()
-    application.auth = auth
-    application.clients = []
-    application.rooms = {}
-    application.allowed_origins = allowed_origins
-    application.service = service
+    collection_handler = CollectionHandler(service)
+    app.router.add_route('*', '/{collection}', collection_handler.dispatch,
+                         name='collection')
+    app.router.add_route('*', '/{collection}/', collection_handler.dispatch,
+                         name='collection_slash')
+    app.router.add_route('POST', '/{collection}/{action}',
+                         collection_handler.custom_action,
+                         name='collection_custom_action')
+    app.router.add_route('OPTIONS', '/{collection}/{action}',
+                         options)
+
+    resource_handler = ResourceHandler(service)
+    app.router.add_route('*', '/{collection}/{resource_id}',
+                         resource_handler.dispatch,
+                         name='resource')
+    app.router.add_route('*', '/{collection}/{resource_id}/',
+                         resource_handler.dispatch,
+                         name='resource_slash')
+    app.router.add_route('OPTIONS', '/{collection}/{resource_id}/{action}',
+                         options)
+    app.router.add_route('*', '/{collection}/{resource_id}/{action}',
+                         resource_handler.custom_action,
+                         name='resource_custom_action')
+
+    handler = app.make_handler()
+    yield from loop.create_server(handler, '0.0.0.0', port)
 
     # Set application back-reference in service
-    service.application = application
+    service.app = app
 
-    return application
+    return app

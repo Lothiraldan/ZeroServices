@@ -1,4 +1,6 @@
+import asyncio
 from zeroservices import ZeroMQMedium, ResourceService
+from zeroservices.discovery import UdpDiscoveryMedium
 from zeroservices.backend.mongodb import MongoDBCollection
 
 
@@ -9,7 +11,13 @@ class PowerCollection(MongoDBCollection):
         self.collection.ensure_index([('description', 'text')])
 
 
-if __name__ == '__main__':
-    todo = ResourceService('fosdem_2015_power', ZeroMQMedium(port_random=True))
+def main():
+    loop = asyncio.get_event_loop()
+    medium = ZeroMQMedium(loop, UdpDiscoveryMedium)
+    todo = ResourceService('fosdem_2015_power', medium)
     todo.register_resource(PowerCollection("power", "fosdem_db"))
-    todo.main()
+    loop.run_until_complete(todo.start())
+    loop.run_forever()
+
+if __name__ == '__main__':
+    main()

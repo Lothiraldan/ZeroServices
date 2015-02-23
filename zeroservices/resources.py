@@ -1,3 +1,5 @@
+import asyncio
+
 from .service import BaseService
 from .exceptions import UnknownService, ResourceException
 from .query import match
@@ -13,7 +15,7 @@ import logging
 
 def is_callable(method):
     method.is_callable = True
-    return method
+    return asyncio.coroutine(method)
 
 
 class BaseResourceService(BaseService):
@@ -24,27 +26,28 @@ class BaseResourceService(BaseService):
         self.resources = {}
         self.resources_directory = {}
         self.resources_worker_directory = {}
-        super(BaseResourceService, self).__init__(name, medium)
+        super().__init__(name, medium)
 
     def save_new_node_info(self, node_info):
-        super(BaseResourceService, self).save_new_node_info(node_info)
+        super().save_new_node_info(node_info)
 
         for resource in node_info.get('resources', ()):
             self.resources_directory[resource] = node_info['node_id']
 
-    def send(self, collection, **kwargs):
+    @asyncio.coroutine
+    def send(self, collection_name, **kwargs):
         message = kwargs
-        message.update({'collection': collection})
+        message.update({'collection_name': collection_name})
 
-        if collection in self.resources.keys():
-            result = self.on_message(**message)
+        if collection_name in self.resources.keys():
+            result = yield from self.on_message(**message)
         else:
             try:
-                node_id = self.resources_directory[collection]
+                node_id = self.resources_directory[collection_name]
             except KeyError:
-                raise UnknownService("Unknown service {0}".format(collection))
+                raise UnknownService("Unknown service {0}".format(collection_name))
 
-            result = super(BaseResourceService, self).send(node_id, message)
+            result = yield from super().send(node_id, message)
 
         if result['success'] is False:
             raise ResourceException(result.pop("data"))
@@ -55,7 +58,7 @@ class BaseResourceService(BaseService):
 class ResourceService(BaseResourceService):
 
     def service_info(self):
-        return {'name': self.name, 'resources': self.resources.keys(),
+        return {'name': self.name, 'resources': list(self.resources.keys()),
                 'node_type': 'node'}
 
     def on_registration_message_worker(self, node_info):
@@ -66,16 +69,17 @@ class ResourceService(BaseResourceService):
                 # TODO, change medium node_id ?
                 resources_workers[node_info['name']] = node_info
 
-        self.medium.send_registration_answer(node_info)
-        self.on_peer_join(node_info)
+        self.medium.send_registration_answer(node_info['node_id'])
+        self.on_peer_join(node_info['node_id'])
 
-    def on_message(self, collection, message_type=None, *args, **kwargs):
+    @asyncio.coroutine
+    def on_message(self, collection_name, message_type=None, *args, **kwargs):
         '''Ignore message_type for the moment
         '''
 
         # Get collection
         try:
-            collection = self.resources[collection]
+            collection = self.resources[collection_name]
         except KeyError:
             error_message = 'No collection named %s' % collection
             return {'success': False, 'message': error_message}
@@ -84,7 +88,7 @@ class ResourceService(BaseResourceService):
 
         # Try to get a result
         try:
-            result = collection.on_message(*args, **kwargs)
+            result = yield from collection.on_message(*args, **kwargs)
         except Exception as e:
             self.logger.exception("Error: {0}".format(str(e)))
             return {'success': False, 'data': str(e)}
@@ -92,13 +96,14 @@ class ResourceService(BaseResourceService):
             self.logger.debug("Success: {0}".format(result))
             return {'success': True, 'data': result}
 
+    @asyncio.coroutine
     def publish(self, *args):
         '''Call BaseService.publish and call on_event on self.
         '''
-        super(ResourceService, self).publish(*args)
+        yield from super(ResourceService, self).publish(*args)
 
         # Publish to itself
-        self.on_event(*args)
+        yield from self.on_event(*args)
 
     ### Utils
     def register_resource(self, collection):
@@ -141,24 +146,25 @@ class ResourceCollection(object):
     resource_class = None
     service = None
 
-    def __init__(self, resource_class, resource_name):
-        self.resource_class = resource_class
+    def __init__(self, resource_name):
         self.resource_name = resource_name
         self.logger = logging.getLogger("{0}.{1}".format(resource_name, 'collection'))
 
     def on_message(self, action, resource_id=None, **kwargs):
         if resource_id:
             resource = self.instantiate(resource_id=resource_id)
+            self.logger.debug("Resource_id, then using resource {0}".format(resource))
             action_handler = getattr(resource, action, None)
         else:
+            self.logger.debug("No resource id, then using collection {0}".format(self))
             action_handler = getattr(self, action, None)
 
-        self.logger.debug("Action handler {0}".format(action_handler))
+        self.logger.debug("Action handler {0} {1}".format(action_handler, locals()))
 
         if action_handler and getattr(action_handler, 'is_callable', False):
             return action_handler(**kwargs)
         else:
-            raise NoActionHandler('No handler for action %s' % action)
+            raise NoActionHandler('No handler for action {0}'.format(action))
 
     def instantiate(self, **kwargs):
         return self.resource_class(service=self.service,
@@ -166,7 +172,8 @@ class ResourceCollection(object):
 
     def publish(self, topic, message):
         message.update({'resource_name': self.resource_name})
-        self.service.publish('.'.join((self.resource_name, topic)), message)
+        topic = '.'.join((self.resource_name, topic))
+        yield from self.service.publish(topic, message)
 
     @is_callable
     def list(self, where=None):
@@ -209,8 +216,8 @@ class Resource(object):
 
     def publish(self, topic, message):
         message.update({'resource_id': self.resource_id})
-        self.resource_collection.publish('.'.join((topic, self.resource_id)),
-                                          message)
+        topic = '.'.join((topic, self.resource_id))
+        yield from self.resource_collection.publish(topic, message)
 
 
 class ResourceWorker(BaseResourceService):
@@ -218,31 +225,34 @@ class ResourceWorker(BaseResourceService):
     def __init__(self, name, medium):
         name = '{:s}-{:s}'.format(name, str(uuid4()))
         self.rules = {}
-        super(ResourceWorker, self).__init__(name, medium)
+        super().__init__(name, medium)
 
-    def main(self):
+    @asyncio.coroutine
+    def start(self):
         self.medium.periodic_call(self.poll_check, 10)
-        super(ResourceWorker, self).main()
+        yield from super().start()
 
+    @asyncio.coroutine
     def poll_check(self):
         # Ask about existing resources matching rule
         self.logger.info('Poll check starting')
         for resource_type, rules in self.rules.items():
             for rule in rules:
-                matching_resources = self.send(collection=resource_type,
-                                                action="list",
-                                                where=rule.matcher)
+                matching_resources = yield from self.send(collection_name=resource_type,
+                                                          action="list",
+                                                          where=rule.matcher)
                 self.logger.info('Rule %s, resources %s', rule, matching_resources)
                 for resource in matching_resources:
-                    rule(resource_type, resource['resource_data'],
-                         resource['resource_id'], 'periodic')
+                    yield from rule(resource_type, resource['resource_data'],
+                                    resource['resource_id'], 'periodic')
 
     def service_info(self):
-        return {'name': self.name, 'resources': self.rules.keys(),
+        return {'name': self.name, 'resources': list(self.rules.keys()),
                 'node_type': 'worker'}
 
-    def on_event(self, message_type, message):
-        resource_name = message['resource_name']
+    @asyncio.coroutine
+    def on_event(self, message_type, resource_name, action, resource_id,
+                 resource_data=None, **kwargs):
 
         # Check resource rules
         resource_rules = self.rules.get(resource_name, ())
@@ -250,20 +260,16 @@ class ResourceWorker(BaseResourceService):
         if not resource_rules:
             return
 
-        resource_data = message.get('resource_data')
-        action = message['action']
-        resource_id = message['resource_id']
-
         if not resource_data and action != "delete":
-            resource = self.send(collection=resource_name,
-                                  action="get",
-                                  resource_id=resource_id)
+            resource = yield from self.send(collection_name=resource_name,
+                                            action="get",
+                                            resource_id=resource_id)
             resource_data = resource['resource_data']
 
         # See if one rule match
         for rule in resource_rules:
             if rule.match(resource_data):
-                rule(resource_name, resource_data, resource_id, action)
+                yield from rule(resource_name, resource_data, resource_id, action)
 
     def register(self, callback, resource_type, **matcher):
         rule = Rule(callback, matcher)

@@ -5,72 +5,6 @@ from .exceptions import ServiceUnavailable
 from .query import match
 
 
-# Test memory medium
-
-SERVICES = {}
-SERVICES_LIST = []
-
-
-class MemoryMedium(BaseMedium):
-
-    def __init__(self, node_id):
-        super(MemoryMedium, self).__init__(node_id)
-        self.topics = []
-        self.callbacks = []
-
-    def register(self):
-        self.logger.info('Register %s', self.get_node_info())
-
-        # Register myself to global
-        SERVICES[self.node_id] = self
-        SERVICES_LIST.append(self)
-
-        self.publish('register', self.get_node_info())
-
-    def start(self):
-        pass
-
-    def close(self):
-        del SERVICES[self.node_id]
-        SERVICES_LIST.remove(self)
-
-    def connect_to_node(self, peer_info):
-        pass
-
-    def subscribe(self, topic):
-        self.topics.append(topic)
-
-    def process_sub(self, message_type, data):
-        self.logger.info('Process sub, message_type: %s, data: %s' %
-            (message_type, data))
-        self.event_callback(message_type, data)
-
-    def process_raw_query(self, message_type, message):
-        self.logger.info('Process raw query, message_type: %s, message: %s' %
-            (message_type, message))
-
-        return self.msg_callback(message_type, **message)
-
-    def publish(self, event_type, event_data):
-        for service in [s for s in SERVICES_LIST if s.node_id != self.node_id]:
-            service.process_event(event_type, event_data)
-
-    def send(self, peer_info, message, message_type="message", callback=None,
-             wait_response=True):
-        try:
-            service = SERVICES[peer_info['node_id']]
-        except KeyError:
-            raise ServiceUnavailable('Service %s is unavailable.' % peer_info['node_id'])
-
-        return service.process_message(message, message_type)
-
-    def periodic_call(self, callback, callback_time):
-        self.callbacks.append(callback)
-
-    def call_callbacks(self):
-        for callback in self.callbacks:
-            callback()
-
 # Memory Collection
 
 
@@ -83,7 +17,7 @@ class MemoryResource(Resource):
     @is_callable
     def create(self, resource_data):
         self.collection[self.resource_id] = resource_data
-        self.publish('create', {'action': 'create', 'resource_data': resource_data})
+        yield from self.publish('create', {'action': 'create', 'resource_data': resource_data})
         return {'resource_id': self.resource_id}
 
     @is_callable
@@ -103,14 +37,14 @@ class MemoryResource(Resource):
         for key, value in set_keys.items():
             resource[key] = value
 
-        self.publish('patch', {'action': 'patch', 'patch': patch})
+        yield from self.publish('patch', {'action': 'patch', 'patch': patch})
 
         return resource
 
     @is_callable
     def delete(self):
         del self.collection[self.resource_id]
-        self.publish('delete', {'action': 'delete'})
+        yield from self.publish('delete', {'action': 'delete'})
         return 'OK'
 
     @is_callable
@@ -119,17 +53,21 @@ class MemoryResource(Resource):
         resource = self.collection[self.resource_id]
         links = resource.setdefault('_links', {})
         links.setdefault(relation, []).append({'target_id': target_id,
-                                                 'title': title})
+                                               'title': title})
         links.setdefault('latest', {})[target_relation] = target_id
-        self.publish('add_link', {'action': 'add_link', 'target_id': target_id,
-                      'title': title, 'relation': relation})
+
+        event = {'action': 'add_link', 'target_id': target_id,
+                 'title': title, 'relation': relation}
+        yield from self.publish('add_link', event)
         return 'OK'
 
 
 class MemoryCollection(ResourceCollection):
 
+    resource_class = MemoryResource
+
     def __init__(self, collection_name):
-        super(MemoryCollection, self).__init__(MemoryResource, collection_name)
+        super(MemoryCollection, self).__init__(collection_name)
         self._collection = {}
 
     def instantiate(self, **kwargs):

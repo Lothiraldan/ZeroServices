@@ -1,6 +1,8 @@
 import logging
 
-from zeroservices import BaseService, ZeroMQMedium
+import asyncio
+from zeroservices import ZeroMQMedium, BaseService
+from zeroservices.discovery import UdpDiscoveryMedium
 
 
 class SnifferService(BaseService):
@@ -11,9 +13,16 @@ class SnifferService(BaseService):
         self.medium.logger.setLevel(logging.ERROR)
 
     def on_event(self, message_type, *args, **kwargs):
-        print "[{}] {} {}".format(message_type, args, kwargs)
+        print("[{}] {} {}".format(message_type, args, kwargs))
+        yield from asyncio.sleep(0.0000001)
 
+
+def main():
+    loop = asyncio.get_event_loop()
+    medium = ZeroMQMedium(loop, UdpDiscoveryMedium)
+    sniffer = SnifferService('sniffer', medium)
+    loop.run_until_complete(sniffer.start())
+    loop.run_forever()
 
 if __name__ == '__main__':
-    sniffer = SnifferService('sniffer', ZeroMQMedium(port_random=True))
-    sniffer.main()
+    main()

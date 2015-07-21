@@ -28,6 +28,11 @@ class BaseResourceService(BaseService):
         self.resources_worker_directory = {}
         super().__init__(name, medium)
 
+    @property
+    def known_resources(self):
+        return list(self.resources.keys()) + list(self.resources_directory.keys())
+
+
     def save_new_node_info(self, node_info):
         super().save_new_node_info(node_info)
 

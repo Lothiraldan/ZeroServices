@@ -128,8 +128,7 @@ class BaseHandler(object):
 class MainHandler(BaseHandler):
 
     def main(self, request):
-        repository = self.service.resources_directory
-        response = json.dumps({'resources': list(repository.keys())}).encode('utf-8')
+        response = json.dumps({'resources': self.service.known_resources}).encode('utf-8')
         return web.Response(body=response)
 
 

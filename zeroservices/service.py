@@ -1,4 +1,8 @@
+import asyncio
 import logging
+
+from asyncio import coroutine
+from copy import copy
 
 from zeroservices.medium.zeromq import ZeroMQMedium
 from zeroservices.exceptions import UnknownNode
@@ -12,14 +16,13 @@ DEFAULT_MEDIUM = ZeroMQMedium
 class BaseService(object):
 
     medium = None
-    nodes_directory = {}
     name = None
 
     def __init__(self, name, medium):
         self.name = name
         self.medium = medium
         self.medium.set_service(self)
-        self.nodes_directory = {}
+        self.directory = {}
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
 
@@ -45,22 +48,22 @@ class BaseService(object):
             self.on_registration_message_worker(node_info)
 
     def on_registration_message_node(self, node_info):
-        if node_info['node_id'] in self.nodes_directory:
+        if node_info['node_id'] in self.directory:
             return
 
         self.save_new_node_info(node_info)
-        self.medium.connect_to_node(node_info)
-        self.medium.send_registration_answer(node_info)
+        self.medium.connect_to_node(node_info['node_id'])
+        self.medium.send_registration_answer(node_info['node_id'])
         self.on_peer_join(node_info)
 
     def on_registration_message_worker(self, node_info):
         pass
 
     def save_new_node_info(self, node_info):
-        self.nodes_directory[node_info['node_id']] = node_info
+        self.directory[node_info['node_id']] = copy(node_info)
 
     def get_known_nodes(self):
-        return self.nodes_directory.keys()
+        return self.directory.keys()
 
     def on_peer_join(self, node_info):
         pass
@@ -68,25 +71,36 @@ class BaseService(object):
     def on_peer_leave(self, node_info):
         pass
 
+    @asyncio.coroutine
     def on_message(self, message_type, *args, **kwargs):
         pass
 
+    @asyncio.coroutine
+    def process_event(self, message_type, event_message):
+        if message_type == 'close':
+            return self.service.on_peer_leave(event_message)
+        elif message_type == 'register':
+            return self.service.on_registration_message(event_message)
+        else:
+            result = yield from self.on_event(message_type, **event_message)
+            return result
+
+    @asyncio.coroutine
     def on_event(self, message_type, *args, **kwargs):
         pass
 
     def send(self, node_id, message, **kwargs):
-        try:
-            node_info = self.nodes_directory[node_id]
-        except KeyError:
-            raise UnknownNode("Unknown node {0}".format(node_id))
-        return self.medium.send(node_info, message, **kwargs)
+        return self.medium.send(node_id, message, **kwargs)
 
-    def publish(self, *args):
-        self.medium.publish(*args)
+    def publish(self, *args, **kwargs):
+        return self.medium.publish(*args, **kwargs)
 
-    def main(self):
-        self.medium.register()
-        self.medium.start()
+    @coroutine
+    def start(self):
+        yield from self.medium.start()
+
+    def get_directory(self):
+        return self.directory
 
     def close(self):
-        self.medium.close()
+        return self.medium.close()

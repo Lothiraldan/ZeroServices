@@ -17,8 +17,9 @@ def query_incoming(caller, rel, resource_id, outgoing_resource_type,
 
         caller.logger.info("%s / %s", resource_type, query)
 
-        resource = caller.send(collection=resource_type, action='list',
-                                where=query)
+        resource = yield from caller.send(collection=resource_type,
+                                          action='list',
+                                          where=query)
 
         if not len(resource) == 1:
             caller.logger.info("Query %s", query)

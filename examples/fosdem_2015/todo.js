@@ -16,11 +16,13 @@ var Power = React.createClass({
 
 var TodoApp = React.createClass({
   getInitialState: function() {
-    this.sock = new SockReconnect('http://localhost:5001/realtime', null, null, this.onmessage, this.on_connect);
-    this.sock.connect();
+    this.sock = new WebSocket('ws://localhost:5001/realtime');
+    this.sock.onmessage = this.onmessage;
+    this.sock.onopen = this.on_connect;
 
     return {'power': {}};
   },
+
 
   componentDidMount: function() {
     $.get("http://localhost:5001/power/", function(result) {
@@ -35,7 +37,8 @@ var TodoApp = React.createClass({
   },
 
   onmessage: function(evt) {
-    var evt = evt.data;
+    console.log("EVT" + evt);
+    var evt = JSON.parse(evt.data);
     console.log(evt);
     if(evt.data.action == 'patch') {
         var lists = this.state.power;
@@ -76,17 +79,15 @@ var TodoApp = React.createClass({
   },
 
   register_resource_event: function(resource_id) {
-    this.sock.send(JSON.stringify({'name': 'join', 'data':
-      {'topic': 'power.add_link.' + resource_id}}));
-    this.sock.send(JSON.stringify({'name': 'join', 'data':
-      {'topic': 'power.patch.' + resource_id}}));
-    this.sock.send(JSON.stringify({'name': 'join', 'data':
-      {'topic': 'power.delete.' + resource_id}}));
+    topics = ['power.add_link.' + resource_id, 'power.patch.' + resource_id,
+              'power.delete.' + resource_id];
+    this.sock.send(JSON.stringify({'type': 'subscribe', 'data': {'topics': topics}}));
   },
 
   on_connect: function() {
-    this.sock.send(JSON.stringify({'name': 'join', 'data':
-        {'topic': 'power.create'}}));
+    console.log('on connect');
+    this.sock.send(JSON.stringify({'type': 'join', 'data':
+        {'topics': ['power.create']}}));
 
     for(i in this.state.power) {
       // Register to already retrieved resources events

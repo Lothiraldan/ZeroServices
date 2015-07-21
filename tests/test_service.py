@@ -1,6 +1,12 @@
+import asyncio
+
+from copy import copy
+
 from zeroservices import BaseService
+from zeroservices.medium.memory import MemoryMedium
+from zeroservices.discovery.memory import MemoryDiscoveryMedium
 from zeroservices.exceptions import UnknownNode
-from .utils import test_medium, TestCase
+from .utils import TestCase, _create_test_service, _async_test
 
 try:
     from unittest.mock import Mock, patch, call
@@ -11,88 +17,70 @@ except ImportError:
 class BaseServiceTestCase(TestCase):
 
     def setUp(self):
-        self.name = "TestService"
-        self.medium = test_medium()
-        self.service = BaseService(self.name, self.medium)
-        self.node_info = {'node_id': 'sample', 'name': 'Sample Service',
-                          'node_type': 'node'}
+        asyncio.set_event_loop(None)
+        self.loop = asyncio.new_event_loop()
 
-    def test_instantiation(self):
-        """Test that service pass itself to the medium
-        """
-        self.assertEqual(self.medium.set_service.call_count, 1)
-        self.assertEqual(self.medium.set_service.call_args,
-                         call(self.service))
+        self.name1 = "TestService1"
+        self.node_info1 = {'foo': 'bar'}
+        self.service1 = _create_test_service(self.name1, self.node_info1, self.loop)
+        self.node_id1 = self.service1.medium.node_id
+
+        self.name2 = "TestService2"
+        self.node_info2 = {'foo2': 'babar'}
+        self.service2 = _create_test_service(self.name2, self.node_info2, self.loop)
+        self.node_id2 = self.service2.medium.node_id
+
+    def tearDown(self):
+        self.service1.close()
+        self.service2.close()
+        self.loop.stop()
+        self.loop.close()
+        self.service1.medium.check_leak()
+        self.service2.medium.check_leak()
 
     def test_service_info(self):
-        self.assertEqual(self.service.service_info(),
-            {'name': self.name, 'node_type': 'node'})
+        expected = {'name': self.name1, 'node_type': 'node'}
+        expected.update(self.node_info1)
+        self.assertEqual(self.service1.service_info(), expected)
 
-    def test_on_join(self):
-        self.service.on_peer_join = Mock()
+        expected = {'name': self.name2, 'node_type': 'node'}
+        expected.update(self.node_info2)
+        self.assertEqual(self.service2.service_info(), expected)
 
-        self.service.on_registration_message(self.node_info)
-        self.assertEqual(self.service.nodes_directory,
-                         {self.node_info['node_id']: self.node_info})
+    @_async_test
+    def test_register(self):
+        yield from self.service1.start()
+        yield from self.service2.start()
 
-        self.assertEqual(self.medium.send_registration_answer.call_count, 1)
-        mock_call = self.medium.send_registration_answer.call_args
-        self.assertEqual(mock_call, call(self.node_info))
+        def _expected_infos(service):
+            service_info = copy(service.service_info())
+            service_info['node_id'] = service.medium.node_id
+            return {service.medium.node_id: service_info}
 
-        self.assertEqual(self.medium.connect_to_node.call_count, 1)
-        mock_call = self.medium.connect_to_node.call_args
-        self.assertEqual(mock_call, call(self.node_info))
+        self.assertEqual(self.service1.get_directory(), _expected_infos(self.service2))
+        self.assertEqual(self.service2.get_directory(), _expected_infos(self.service1))
 
-        self.assertEqual(self.service.on_peer_join.call_count, 1)
-        mock_call = self.service.on_peer_join.call_args
-        self.assertEqual(mock_call, call(self.node_info))
-
-    def test_join_twice(self):
-        self.service.on_peer_join = Mock()
-
-        self.service.on_registration_message(self.node_info)
-        self.assertEqual(self.service.nodes_directory,
-                         {self.node_info['node_id']: self.node_info})
-        self.medium.send_registration_answer.reset_mock()
-        self.service.on_peer_join.reset_mock()
-
-        self.service.on_registration_message(self.node_info)
-        self.assertEqual(self.service.nodes_directory,
-                         {self.node_info['node_id']: self.node_info})
-
-        self.assertEqual(self.medium.send_registration_answer.call_count, 0)
-        self.assertEqual(self.service.on_peer_join.call_count, 0)
-
+    @_async_test
     def test_send(self):
-        # Set response on zeromq mock
-        response = {'result': True}
-        self.medium.send.return_value = response
+        yield from self.service1.start()
+        yield from self.service2.start()
 
-        self.service.on_registration_message(self.node_info)
-        message = {'content': 'Coucou'}
-        self.assertEquals(self.service.send(self.node_info['node_id'], message),
-                          response)
+        response = {'response': 'Pong'}
+        self.service2.on_message_mock.return_value = response
 
-        self.assertEqual(self.medium.send.call_count, 1)
-        mock_call = self.medium.send.call_args
-        self.assertEqual(mock_call, call(self.node_info, message))
+        message = {'content': 'Ping'}
+        result = yield from self.service1.send(self.node_id2, message)
 
+        self.assertEqual(result, response)
+        self.service2.on_message_mock.assert_called_once_with(message_type='message', **message)
+
+    @_async_test
     def test_publish(self):
-        # Set response on zeromq mock
-        resource_name = 'ABC'
+        yield from self.service1.start()
+        yield from self.service2.start()
 
-        publish_message = {'type': 'new', '_id': 'foo',
-             'resource_data': 'bar', 'resource_name': resource_name}
-        topic = '{}.{}'.format(resource_name, 'action')
+        event_type = 'EVENT_TYPE'
+        event_message = {'foo': 'bar', 'foo2': 'babar'}
+        yield from self.service1.publish(event_type, event_message)
 
-        # Check that BaseService didn't call on_event on publish
-        with patch.object(self.service, 'on_event') as mock:
-            self.service.publish(topic, publish_message)
-
-        self.assertEqual(mock.call_count, 0)
-
-
-    def test_send_unknown_node(self):
-        message = {'content': 'Coucou'}
-        with self.assertRaises(UnknownNode):
-            self.service.send('commit', message)
+        self.service2.on_event_mock.assert_called_once_with(event_type, **event_message)

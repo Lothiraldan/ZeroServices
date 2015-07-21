@@ -1,6 +1,9 @@
+import asyncio
+
 from zeroservices import ZeroMQMedium, ResourceService
-from zeroservices.backend.mongodb import MongoDBCollection, MongoDBResource
 from zeroservices.services import get_http_interface
+
+from zeroservices.discovery import UdpDiscoveryMedium
 
 
 # Http utils
@@ -12,6 +15,10 @@ class Auth(object):
 
 
 if __name__ == '__main__':
-    todo = ResourceService('todo_mvc', ZeroMQMedium(port_random=True))
-    application = get_http_interface(todo, port=5001, auth=Auth(), allowed_origins="*")
-    todo.main()
+    loop = asyncio.get_event_loop()
+    medium = ZeroMQMedium(loop, UdpDiscoveryMedium)
+    service = ResourceService('todo_mvc', medium)
+    application = get_http_interface(service, loop, port=5001, allowed_origins="*")
+    application = loop.run_until_complete(application)
+    loop.run_until_complete(service.start())
+    loop.run_forever()

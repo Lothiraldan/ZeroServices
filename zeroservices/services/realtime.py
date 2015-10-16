@@ -156,23 +156,35 @@ class RealtimeHandler(object):
 
         message = json.dumps({'type': msg_type, 'data': msg})
 
+
+        sessions_to_clean = []
+
         for session in sessions:
-            session.ws.send_str(message)
+            try:
+                session.ws.send_str(message)
+            except RuntimeError:
+                # Websocket was closed, ignore it but clean
+                sessions_to_clean.append(session)
+
+        for session in sessions_to_clean:
+            self._clean_session(session)
 
     @asyncio.coroutine
     def handler(self, request):
         ws = aiohttp.web.WebSocketResponse()
         ws.start(request)
 
-        while True:
-            msg = yield from ws.receive()
+        try:
+            while True:
+                msg = yield from ws.receive()
 
-            session = Session(ws, None)
-            self.sessions.add(session)
+                session = Session(ws, None)
+                self.sessions.add(session)
 
-            self.process(session, msg.tp, msg)
-
-            print("Status", self.__class__.sessions, self.__class__.rooms)
+                self.process(session, msg.tp, msg)
+        except RuntimeError:
+            # Websocket was closed, ignore it
+            pass
 
         return ws
 
@@ -189,10 +201,24 @@ class RealtimeHandler(object):
 
             if parsed_msg['type'] == 'subscribe':
                 for topic in parsed_msg.get('topics', set()):
-                    if not topic in self.session.topics:
+                    if not topic in session.topics:
                         session.topics.add(topic)
                         self.__class__.rooms[topic].add(session)
-        elif msg_type == aiohttp.MsgType.close:
-            pass
+        elif msg_type in (aiohttp.MsgType.close, aiohttp.MsgType.closed):
+            self._clean_session(session)
         elif msg_type == aiohttp.MsgType.error:
-            pass
+            self._clean_session(session)
+            self.logger.error("Locals %s", locals())
+        else:
+            raise Exception(msg_type)
+
+    def _clean_session(self, session):
+        self.sessions.remove(session)
+        for topic in session.topics:
+            self.__class__.rooms[topic].remove(session)
+
+    def __sessions_status(self):
+        rooms = {room: len(room_sessions) for room, room_sessions in
+                 self.__class__.rooms.items()}
+        rooms['*'] = len(self.sessions)
+        return rooms

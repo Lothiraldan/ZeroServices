@@ -139,7 +139,6 @@ class RealtimeHandler(object):
 
     @asyncio.coroutine
     def publish(self, event_type, event_message):
-        # self.logger.info("On event %s", locals())
         self.broadcast('*', 'event', event_message)
 
         topics = accumulate(event_type.split('.'), lambda x, y: '.'.join((x, y)))

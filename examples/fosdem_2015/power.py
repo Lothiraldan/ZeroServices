@@ -14,8 +14,8 @@ class PowerCollection(MongoDBCollection):
 def main():
     loop = asyncio.get_event_loop()
     medium = ZeroMQMedium(loop, UdpDiscoveryMedium)
-    service = ResourceService('fosdem_2015_power', medium)
-    service.register_resource(PowerCollection("power", "fosdem_db"))
+    service = ResourceService('power_service', medium)
+    service.register_resource(PowerCollection("power", "db"))
     loop.run_until_complete(service.start())
     loop.run_forever()
 

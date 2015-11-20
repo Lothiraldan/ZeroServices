@@ -113,8 +113,8 @@ class HttpInterfaceMainTestCase(HttpInterfaceTestCase):
     def test_get_main(self):
         result = yield from self.get_endpoint("main")
         self.assertEqual(result.status, 200)
-        result_content = yield from result.text()
-        self.assertEqual(result_content, "Hello world from api")
+        result_content = yield from result.json()
+        self.assertEqual(result_content, {"resources": [self.resource_name]})
 
 
 class HttpInterfaceCollectionTestCase(HttpInterfaceTestCase):

@@ -1,5 +1,6 @@
 import sys
 import pymongo
+import os
 
 from zeroservices import ResourceCollection, Resource
 from zeroservices.resources import is_callable
@@ -80,7 +81,10 @@ class MongoDBCollection(ResourceCollection):
         super(MongoDBCollection, self).__init__(collection_name)
         self.database_name = database_name
         self.collection_name = collection_name
-        self.connection = pymongo.MongoClient()
+
+        mongo_host = os.environ.get('MONGO_HOST', 'localhost')
+
+        self.connection = pymongo.MongoClient(host=mongo_host)
         self.database = self.connection[database_name]
         self.collection = self.database[collection_name]
 

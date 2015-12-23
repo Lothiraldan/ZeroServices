@@ -30,7 +30,8 @@ setup(
     url='https://github.com/lothiraldan/zeroservices',
     packages=[
         'zeroservices', 'zeroservices.medium',
-        'zeroservices.backend', 'zeroservices.services'
+        'zeroservices.backend', 'zeroservices.services',
+        'zeroservices.discovery'
     ],
     package_dir={'zeroservices':
                  'zeroservices'},

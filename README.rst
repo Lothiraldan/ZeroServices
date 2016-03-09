@@ -1,8 +1,7 @@
 ZeroServices
 ============
 
-Network services made easy and Micro-Services architectures made fucking
-easy.
+Network services made easy and Micro-Services architectures made so easy.
 
 -  Free software: MIT license
 -  Documentation: https://zeroservices.readthedocs.org.

@@ -124,6 +124,7 @@ class ZeroMQMedium(BaseMedium):
 
         if wait_response:
             message_type, message = yield from request_socket.read()
+            request_socket.close()
             assert message_type.decode('utf-8') == 'message'
             return json.loads(message.decode('utf-8'))
 

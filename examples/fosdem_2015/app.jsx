@@ -1,4 +1,4 @@
-import React from 'react/addons';
+import React from 'react';
 import ReactDom from 'react-dom'
 import Baobab from 'baobab'
 import axios from 'axios';
@@ -36,6 +36,9 @@ var ws = new WebSocket('ws://localhost:5001/realtime');
 ws.onmessage = onmessage;
 ws.onopen = onopen;
 ws.onclose = onclose;
+ws.onerror = function(e) {
+  console.log("Error", e);
+}
 
 // Components
 class Row extends React.Component {

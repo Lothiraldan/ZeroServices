@@ -1,6 +1,8 @@
-from zeroservices import ZeroMQMedium, ResourceService, RealtimeResourceService
+from zeroservices import MemoryMedium, ResourceService, RealtimeResourceService
 from zeroservices.backend.mongodb import MongoDBCollection, MongoDBResource
+from zeroservices.discovery import MemoryDiscoveryMedium
 from zeroservices.services import get_http_interface
+import asyncio
 
 
 # TODO implement your Auth logic here
@@ -10,17 +12,28 @@ class Auth(object):
         return True
 
 
-if __name__ == '__main__':
+def main():
+    loop = asyncio.get_event_loop()
+    medium = MemoryMedium(loop, MemoryDiscoveryMedium)
+
     {% if cookiecutter.realtime_api %}
-    service = RealtimeResourceService('{{cookiecutter.project_name}}', ZeroMQMedium(port_random=True))
+    service = RealtimeResourceService('{{cookiecutter.project_name}}', medium)
     {% else %}
-    service = ResourceService('{{cookiecutter.project_name}}', ZeroMQMedium(port_random=True))
+    service = ResourceService('{{cookiecutter.project_name}}', medium)
     {% endif %}
-    api = get_http_interface(service, port='{{cookiecutter.api_port}}', auth=Auth(), allowed_origins="*")
+
+    # Get the HTTP interface and start listening
+    api = get_http_interface(service, loop, port='{{cookiecutter.api_port}}', auth=Auth(), allowed_origins="*")
+    api = loop.run_until_complete(api)
 
     {% for resource in cookiecutter['resources (separated by comma)'].split(',') -%}
     service.register_resource(MongoDBCollection("{{resource}}", "{{cookiecutter.mongodb_database}}"))
     {% endfor %}
 
     # Start the service with API and resources
-    service.main()
+    loop.run_until_complete(service.start())
+    loop.run_forever()
+
+
+if __name__ == '__main__':
+    main()

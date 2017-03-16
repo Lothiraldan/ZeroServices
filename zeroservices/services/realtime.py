@@ -156,7 +156,10 @@ class RealtimeHandler(object):
         message = json.dumps({'type': msg_type, 'data': msg})
 
         for session in sessions:
-            session.ws.send_str(message)
+            try:
+                session.ws.send_str(message)
+            except RuntimeError as e:
+                pass
 
     @asyncio.coroutine
     def handler(self, request):

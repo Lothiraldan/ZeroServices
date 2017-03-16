@@ -1,6 +1,9 @@
 import sys
 import pymongo
+from bson import ObjectId
 import os
+
+from copy import copy
 
 from zeroservices import ResourceCollection, Resource
 from zeroservices.resources import is_callable
@@ -31,12 +34,12 @@ class MongoDBResource(Resource):
         if not document:
             return 'NOK'
 
-        return {'resource_id': document.pop('_id'),
+        return {'resource_id': str(document.pop('_id')),
                 'resource_data': document}
 
     @is_callable
     def patch(self, patch):
-        new_document = self.collection.find_and_modify({'_id': self.resource_id},
+        new_document = self.collection.find_and_modify({'_id': ObjectId(self.resource_id)},
             patch, new=True)
 
         yield from self.publish('patch', {'action': 'patch', 'patch': patch})
@@ -69,7 +72,7 @@ class MongoDBResource(Resource):
     @property
     def document(self):
         if self._document is None:
-            self._document = self.collection.find_one({'_id': self.resource_id})
+            self._document = self.collection.find_one({'_id': ObjectId(self.resource_id)})
         return self._document
 
 
@@ -104,6 +107,19 @@ class MongoDBCollection(ResourceCollection):
 
         result = list()
         for document in self.collection.find(where):
-            result.append({'resource_id': document.pop('_id'),
+            result.append({'resource_id': str(document.pop('_id')),
                            'resource_data': document})
         return result
+
+    @is_callable
+    def create(self, resource_data):
+        document_data = copy(resource_data)
+        document_id = self.collection.insert(document_data)
+        # Replace ObjectId by a str
+        document_data['_id'] = str(document_data['_id'])
+
+        yield from self.publish('create', {'action': 'create',
+                                'resource_data': document_data,
+                                'resource_id': str(document_id)})
+
+        return {'resource_id': str(document_id)}
